@@ -1563,6 +1563,10 @@ public class ItemConstants {
             case 2023494: // Purple
             case 2023495: // Red
             case 2023669: // Gold
+            case 2023295:
+            case 2023296:
+            case 2023297:
+            case 2023298:
                 return true;
 
             default:
