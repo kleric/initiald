@@ -145,16 +145,24 @@ public class User {
         return outPacket;
     }
 
-    public static OutPacket followCharacter(int driverChrId, boolean transferField, Position position) {
+    public static OutPacket followCharacter(int requestor, int driverChrId, boolean transferField, Position position) {
         OutPacket outPacket = new OutPacket(OutHeader.FOLLOW_CHARACTER);
-
+        outPacket.encodeInt(requestor);
         outPacket.encodeInt(driverChrId);
-        if (driverChrId < 0) {
+        if (driverChrId == 0) {
             outPacket.encodeByte(transferField);
             if (transferField) {
                 outPacket.encodePositionInt(position);
             }
         }
+
+        return outPacket;
+    }
+
+    public static OutPacket followCharacterFailed(int driverChrId) {
+        OutPacket outPacket = new OutPacket(OutHeader.FOLLOW_CHARACTER_FAILED);
+        outPacket.encodeInt(driverChrId);
+        outPacket.encodeInt(1);
 
         return outPacket;
     }
