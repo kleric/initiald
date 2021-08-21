@@ -24,3 +24,5 @@ elif sm.getFieldID() == 120000100 and "1" in sm.getQRValue(5675):
     # Update Quest Record EX | Quest ID: [51236] | Data: StageKey=0
 elif sm.getFieldID() == 100000000:
     sm.setMapTaggedObjectVisible("2018TreeBuff", False, 0, 0)
+elif sm.getFieldID() == 250000100:
+    sm.warp(932200005)
