@@ -341,6 +341,9 @@ public class Life extends Observable {
         Npc npc = null;
         if("n".equalsIgnoreCase(getLifeType())) {
             npc = NpcData.getNpcDeepCopyById(getTemplateId());
+            if (npc == null) {
+                return null;
+            }
             npc.setObjectId(getObjectId());
             npc.setLifeType(getLifeType());
             npc.setX(getX());

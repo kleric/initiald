@@ -25,6 +25,10 @@ public class MovementInfo implements Encodable {
     private List<Movement> movements = new ArrayList<>();
     private byte keyPadState;
 
+    public Position getOldPos() {
+        return oldPos;
+    }
+
     public MovementInfo(Position oldPos, Position oldVPos) {
         this.oldPos = oldPos;
         this.oldVPos = oldVPos;

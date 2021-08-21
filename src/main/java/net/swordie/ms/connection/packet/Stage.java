@@ -130,7 +130,7 @@ public class Stage {
         }
         outPacket.encodeString(ServerConfig.LOGIN_NOTICE_POPUP);
         outPacket.encodeInt(0);
-        chr.getClient().getChannelInstance().broadcastPacket(WvsContext.broadcastMessage(4, chr.getClient().getChannel(), "v203.4", false));
+        chr.getClient().getChannelInstance().broadcastPacket(WvsContext.broadcastMessage(4, chr.getClient().getChannel(), "Welcome to Initial D", false));
         outPacket.encodeByte(0);// v202.3
 
         // sub_16A4D10

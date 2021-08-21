@@ -502,7 +502,7 @@ public abstract class Job {
 		chr.setStat(Stat.mp, curMP);
 		stats.put(Stat.mp, curMP);
 		c.write(WvsContext.statChanged(stats));
-		chr.getField().broadcastPacket(UserRemote.hit(chr, hitInfo), chr);
+		//chr.getField().broadcastPacket(UserRemote.hit(chr, hitInfo), chr);
 		if (chr.getParty() != null) {
 			chr.getParty().broadcast(UserRemote.receiveHP(chr), chr);
 		}

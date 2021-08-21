@@ -636,7 +636,9 @@ public class FieldData {
                     field.addLife(mobGen);
                 } else if ("n".equalsIgnoreCase(l.getLifeType())) {
                     Npc npc = l.createNpcFromLife();
-                    field.addLife(npc);
+                    if (npc != null) {
+                        field.addLife(npc);
+                    }
                 } else if ("r".equalsIgnoreCase(l.getLifeType())) {
                     Reactor reactor = l.createReactorFromLife();
                     field.addLife(reactor);

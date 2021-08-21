@@ -192,6 +192,28 @@ public class AdminCommands {
         }
     }
 
+    @Command(names = {"skin"}, requiredType = TESTER)
+    public static class skin extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            AvatarLook hair1 = chr.getAvatarData().getAvatarLook();
+            int hair = Integer.parseInt(args[1]);
+            hair1.setSkin(hair);
+            chr.setStatAndSendPacket(Stat.skin, hair);
+            // chr.changeChannelAndWarp(chr.getClient().getChannelInstance().getChannelId(), chr.getFieldID());
+        }
+    }
+
+    @Command(names = {"clearavatar"}, requiredType = TESTER)
+    public static class ClearA extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            AvatarLook hair1 = chr.getAvatarData().getAvatarLook();
+            int hair = Integer.parseInt(args[1]);
+            hair1.setHair(hair);
+            chr.setStatAndSendPacket(Stat.hair, hair);
+            // chr.changeChannelAndWarp(chr.getClient().getChannelInstance().getChannelId(), chr.getFieldID());
+        }
+    }
+
     @Command(names = {"face"}, requiredType = TESTER)
     public static class face extends AdminCommand {
         public static void execute(Char chr, String[] args) {
@@ -745,6 +767,14 @@ public class AdminCommands {
         }
     }
 
+    @Command(names = {"sjump"}, requiredType = TESTER)
+    public static class Sjump extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            chr.sjumps = 1;
+            chr.refreshFlagActionBar();
+        }
+    }
+
     @Command(names = {"ap"}, requiredType = TESTER)
     public static class Ap extends AdminCommand {
         public static void execute(Char chr, String[] args) {
@@ -1064,7 +1094,12 @@ public class AdminCommands {
         public static void execute(Char chr, String[] args) {
             Char victim = chr.getWorld().getCharByName((args[1]));
             if (victim != null) {
-                chr.changeChannelAndWarp(victim.getClient().getChannelInstance().getChannelId(), victim.getFieldID());
+                if (victim.getClient().getChannelInstance().getChannelId() != chr.getClient().getChannelInstance().getChannelId()) {
+                    chr.changeChannelAndWarp(victim.getClient().getChannelInstance().getChannelId(), victim.getFieldID());
+                    chr.chatMessage(Notice2, "Warped to the right map, but you're on the wrong channel");
+                } else {
+                    chr.warp(victim.getField());
+                }
             } else {
                 chr.chatMessage(Notice2, "Player not found, make sure you typed the correct name (Case Sensitive).");
             }
@@ -1116,6 +1151,54 @@ public class AdminCommands {
             }
             Position position = new Position(portal.getX(), portal.getY());
             chr.write(CField.teleport(position, chr));
+        }
+    }
+
+    @Command(names = {"snext"}, requiredType = TESTER)
+    public static class SpectateNext extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            Field f = chr.getField();
+            if (!f.isRace()) {
+                return;
+            }
+            Char driver = chr.getField().getCharByName(args[1]);
+            if (driver != null) {
+                chr.write(User.followCharacter(chr.getId(), driver.getId(), false, new Position()));
+                return;
+            }
+
+            try {
+                int id = Integer.parseInt(args[1]);
+                driver = chr.getField().getCharByID(id);
+                if (driver != null) {
+                    chr.write(User.followCharacter(chr.getId(), driver.getId(), false, new Position()));
+                    return;
+                }
+            } catch (Exception e) {
+
+            }
+        }
+    }
+
+    @Command(names = {"spectate"}, requiredType = TESTER)
+    public static class Spectate extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            Char driver = chr.getField().getCharByName(args[1]);
+            if (driver != null) {
+                chr.write(User.followCharacter(chr.getId(), driver.getId(), false, new Position()));
+                return;
+            }
+
+            try {
+                int id = Integer.parseInt(args[1]);
+                driver = chr.getField().getCharByID(id);
+                if (driver != null) {
+                    chr.write(User.followCharacter(chr.getId(), driver.getId(), false, new Position()));
+                    return;
+                }
+            } catch (Exception e) {
+
+            }
         }
     }
 
@@ -1384,6 +1467,14 @@ public class AdminCommands {
         }
     }
 
+    @Command(names = {"rankthing"}, requiredType = GAME_MASTER)
+    public static class rankThing extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            int mesos = Integer.parseInt(args[1]);
+            chr.getField().updateRanking(mesos);
+        }
+    }
+
     @Command(names = {"goto"}, requiredType = TESTER)
     public static class GoTo extends AdminCommand {
         public static void execute(Char chr, String[] args) {
@@ -1490,6 +1581,13 @@ public class AdminCommands {
             chr.getScriptManager().dispose(false);
             Server.getInstance().clearCache();
             chr.chatMessage("Cache has been cleared.");
+        }
+    }
+
+    @Command(names = {"pos"}, requiredType = ADMIN)
+    public static class GetPos extends AdminCommand {
+        public static void execute(Char chr, String [] args) {
+            chr.chatMessage(chr.getPosition().toString());
         }
     }
 
@@ -1999,6 +2097,14 @@ public class AdminCommands {
             chr.chatMessage(DarkBlue2, "kat is a thot");
             chr.chatMessage(ItemNoItemSmegaDarkText, "kat is a thot");
             chr.chatMessage(WhiteOnGreen, "kat is a thot");
+        }
+    }
+
+    @Command(names = {"dc"}, requiredType = TESTER)
+    public static class DcCommand extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+
         }
     }
 

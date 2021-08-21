@@ -22,6 +22,10 @@ public abstract class MovementBase implements Movement {
     protected Position vPosition;
     protected Position offset;
 
+    public MovementBase() {
+
+    }
+
     @Override
     public byte getCommand() {
         return command;

@@ -3,6 +3,7 @@ package net.swordie.ms.life.movement;
 import net.swordie.ms.client.character.Char;
 import net.swordie.ms.connection.InPacket;
 import net.swordie.ms.connection.OutPacket;
+import net.swordie.ms.constants.FlagConstants;
 import net.swordie.ms.life.Dragon;
 import net.swordie.ms.life.Life;
 import net.swordie.ms.util.Position;
@@ -52,6 +53,15 @@ public class MovementJump extends MovementBase {
     public void applyTo(Char chr) {
         chr.setPosition(getPosition());
         chr.setMoveAction(getMoveAction());
+        Position p = getPosition();
+        if (p == null) {
+            return;
+        }
+        int y = p.getY();
+        if (y < -682 && y >= -950) {
+            // sjump
+            chr.updateFlagSkill(80001416);
+        }
     }
 
     @Override
