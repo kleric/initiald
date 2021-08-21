@@ -30,6 +30,7 @@ import org.apache.log4j.LogManager;
 import net.swordie.ms.connection.packet.Login;
 import net.swordie.ms.world.Channel;
 import net.swordie.ms.Server;
+import org.kleric.auth.LoginServer;
 import org.mindrot.jbcrypt.BCrypt;
 import static net.swordie.ms.enums.InvType.EQUIPPED;
 
@@ -148,8 +149,10 @@ public class LoginHandler {
         inPacket.decodeInt();// ip
 
        // String accountName = ApiFactory.getFactory().getAccountByToken(c, token);
-        String accountName = token;
-        Account account = Account.getFromDBByName(accountName);
+        Account account = LoginServer.getInstance().loginWithToken(token);
+        if (account == null) {
+            account = Account.getFromDBByName(token);
+        }
         if (account != null) {
             if (Server.getInstance().isAccountLoggedIn(account)) {
                 c.write(Login.checkPasswordResult(false, LoginType.AlreadyConnected, account));
@@ -159,7 +162,7 @@ public class LoginHandler {
                 c.write(WvsContext.broadcastMsg(BroadcastMsg.popUpMessage(banMsg)));
                 c.write(Login.checkPasswordResult(false, LoginType.Blocked, account));
             }  else {
-                //Server.getInstance().addAccount(account);
+                Server.getInstance().addAccount(account);
                 c.setAccount(account);
                 c.setMachineID(machineID);
                 DatabaseManager.saveToDB(account);
