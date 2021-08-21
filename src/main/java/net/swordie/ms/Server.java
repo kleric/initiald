@@ -2,7 +2,9 @@ package net.swordie.ms;
 
 import net.swordie.ms.client.Account;
 import net.swordie.ms.client.Client;
+import net.swordie.ms.connection.netty.ProximityAcceptor;
 import net.swordie.ms.constants.GameConstants;
+import net.swordie.ms.flag.GhostManager;
 import net.swordie.ms.loaders.*;
 import net.swordie.ms.connection.db.DatabaseManager;
 import net.swordie.ms.connection.netty.ChannelAcceptor;
@@ -23,6 +25,8 @@ import net.swordie.ms.util.Loader;
 import net.swordie.ms.util.container.Tuple;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
+import org.kleric.auth.LoginServer;
+import org.kleric.proximity.DiscordLobbyManager;
 import org.w3c.dom.Node;
 
 import javax.script.ScriptEngine;
@@ -78,6 +82,7 @@ public class Server extends Properties {
 		//MapleCrypto.initialize(ServerConstants.VERSION);
 		new Thread(new LoginAcceptor()).start();
 		new Thread(new ChatAcceptor()).start();
+		new Thread(new ProximityAcceptor()).start();
 		worldList.add(new World(ServerConfig.WORLD_ID, ServerConfig.SERVER_NAME, GameConstants.CHANNELS_PER_WORLD, ServerConfig.EVENT_MSG));
 		long startCashShop = System.currentTimeMillis();
 		initCashShop();
@@ -92,6 +97,7 @@ public class Server extends Properties {
 				new Thread(ca).start();
 			}
 		}
+		GhostManager.getInstance();
 		log.info(String.format("Finished loading server in %dms", System.currentTimeMillis() - startNow));
 		new Thread(() -> {
 			// inits the script engine
@@ -118,7 +124,7 @@ public class Server extends Properties {
 	private static List<String> backgrounds = new ArrayList<>();
 
 	private void loadBackgrounds() {
-		Node node = XMLApi.getNodeByPath("login.img", "WorldSelect"); // MapLoadable.java control background
+		Node node = XMLApi.getNodeByPath("UI.wz/Login.img", "WorldSelect"); // MapLoadable.java control background
 		for (Node bg : XMLApi.getAllChildren(node)) {
 			if (!XMLApi.getAttributes(bg).get("name").equals("default")) {
 				backgrounds.add(XMLApi.getAttributes(bg).get("name"));
@@ -155,7 +161,7 @@ public class Server extends Properties {
 	}
 
 	public static void main(String[] args) {
-
+		LoginServer.getInstance().init();
 		getInstance().init(args);
 	}
 
