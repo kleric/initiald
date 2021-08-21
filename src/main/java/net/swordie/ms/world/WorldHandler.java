@@ -109,7 +109,6 @@ import net.swordie.ms.world.shop.NpcShopDlg;
 import net.swordie.ms.world.shop.NpcShopItem;
 import net.swordie.ms.world.shop.ShopRequestType;
 import net.swordie.ms.world.shop.cashshop.CashShop;
-import net.swordie.ms.world.shop.result.MsgShopResult;
 import net.swordie.ms.world.shop.result.ShopResult;
 import net.swordie.ms.world.shop.result.ShopResultType;
 import org.apache.log4j.LogManager;
