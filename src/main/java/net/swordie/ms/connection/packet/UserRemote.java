@@ -5,10 +5,12 @@ import net.swordie.ms.client.character.Char;
 import net.swordie.ms.client.character.info.HitInfo;
 import net.swordie.ms.client.character.skills.Skill;
 import net.swordie.ms.client.character.skills.info.AttackInfo;
+import net.swordie.ms.client.character.skills.info.SkillInfo;
 import net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat;
 import net.swordie.ms.client.character.skills.info.MobAttackInfo;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
 import net.swordie.ms.client.guild.Guild;
+import net.swordie.ms.constants.FlagConstants;
 import net.swordie.ms.constants.GameConstants;
 import net.swordie.ms.enums.BaseStat;
 import net.swordie.ms.connection.OutPacket;
@@ -56,7 +58,242 @@ public class UserRemote {
         return outPacket;
     }
 
+    public static OutPacket fball(Char chr, AttackInfo ai) {
+        OutHeader attackType = ai.attackHeader;
+        /*
+        REMOTE_MELEE_ATTACK(753),
+        REMOTE_SHOOT_ATTACK(754),
+        REMOTE_MAGIC_ATTACK(755),
+         */
+        OutPacket outPacket = new OutPacket(attackType);
+        outPacket.encodeInt(chr.getId());
 
+        outPacket.encodeByte(ai.fieldKey);
+        outPacket.encodeByte(ai.mobCount << 4 | ai.hits);
+        outPacket.encodeInt(chr.getLevel());
+        outPacket.encodeByte(ai.slv);
+        if (ai.slv > 0) {
+            outPacket.encodeInt(ai.skillId);
+        }
+        if(SkillConstants.isZeroSkill(ai.skillId)) {
+            outPacket.encodeByte(ai.zero);
+            if(ai.zero != 0) {
+                outPacket.encodePosition(chr.getPosition());
+            }
+        }
+        if (ai.skillId == 101110104) {
+            return outPacket;
+        }
+        if(attackType == OutHeader.REMOTE_SHOOT_ATTACK &&
+                (SkillConstants.getAdvancedCountHyperSkill(ai.skillId) != 0  ||
+                        SkillConstants.getAdvancedAttackCountHyperSkill(ai.skillId) != 0 ||
+                        SkillConstants.isShikigamiHauntingSkill(ai.skillId))){
+            outPacket.encodeByte(ai.passiveSLV);
+            if(ai.passiveSLV > 0) {
+                outPacket.encodeInt(ai.passiveSkillID);
+            }
+        }
+        outPacket.encodeByte(ai.someMask);
+        outPacket.encodeByte(ai.buckShot);
+        outPacket.encodeInt(ai.option3);
+        outPacket.encodeInt(ai.bySummonedID);
+        if ((ai.buckShot & 2) != 0) {
+            outPacket.encodeInt(ai.buckShotSkillID);
+            outPacket.encodeInt(ai.buckShotSlv);
+        }
+        if ((ai.buckShot & 8) != 0) {
+            outPacket.encodeByte(ai.psdTargetPlus);
+        }
+        byte left = (byte) (ai.left ? 1 : 0);
+        outPacket.encodeShort((left << 15) | ai.attackAction);
+        if(ai.attackAction < 0x76A) {
+            outPacket.encodeByte(0x16);//ai.attackActionType);
+            outPacket.encodeShort(ai.x);
+            outPacket.encodeShort(ai.y);
+            outPacket.encodeByte(ai.showFixedDamage);
+            outPacket.encodeByte(!ai.isDragonAttack);
+            outPacket.encodeByte(ai.actionSpeed);
+            outPacket.encodeByte(ai.mastery);
+            outPacket.encodeInt(ai.bulletID);
+            for(MobAttackInfo mai : ai.mobAttackInfo) {
+                outPacket.encodeInt(mai.mobId);
+                if(mai.mobId > 0) {
+                    outPacket.encodeByte(mai.byteIdk1);
+                    outPacket.encodeByte(mai.byteIdk2);
+                    outPacket.encodeByte(mai.byteIdk3);
+                    outPacket.encodeShort(mai.byteIdk4);
+                    outPacket.encodeInt(0);
+                    outPacket.encodeInt(0);
+                    if(ai.skillId == 80001835 || ai.skillId == 42111002 || ai.skillId == 80011050) {
+                        // Soul Shear
+                        outPacket.encodeByte(ai.hits);
+                        outPacket.encodeInt(0); // not exactly sure
+                    }
+                    for(long dmg : mai.damages) {
+                        outPacket.encodeByte(0); // isCrit
+                        outPacket.encodeLong(dmg);
+                    }
+                    if(SkillConstants.isKinesisPsychicLockSkill(ai.skillId)) {
+                        outPacket.encodeInt(mai.psychicLockInfo);
+                    }
+                    if(ai.skillId == 37111005) {
+                        outPacket.encodeByte(mai.rocketRushInfo);
+                    }
+                }
+            }
+            if(ai.skillId == 2321001 || ai.skillId == 2221052 || ai.skillId == 11121052 || ai.skillId == 12121054) {
+                outPacket.encodeInt(ai.keyDown);
+            } else if(SkillConstants.isSuperNovaSkill(ai.skillId) || SkillConstants.isScreenCenterAttackSkill(ai.skillId) ||
+                    ai.skillId == 101000202 || ai.skillId == 101000102 ||
+                    SkillConstants.isSupportAttackSkill(ai.skillId) ||
+                    ai.skillId == 400041019 ||ai.skillId == 400031016 ||ai.skillId == 400041024 ||
+                    SkillConstants.isWingedJavelin(ai.skillId) || ai.skillId == 400021075 || ai.skillId == 80002452) {
+                outPacket.encodePositionInt(ai.ptAttackRefPoint);
+            }
+            if(SkillConstants.isKeydownSkillRectMoveXY(ai.skillId)) {
+                outPacket.encodePosition(ai.keyDownRectMoveXY);
+            }
+            if(ai.skillId == 51121009) {
+                outPacket.encodeByte(ai.showFixedDamage);
+            }
+            if(ai.skillId == 112110003) { // formation attack
+                outPacket.encodeInt(0);
+            }
+            if(ai.skillId == 42100007) { // Soul Bomb
+                outPacket.encodeShort(0);
+                byte size = 0;
+                outPacket.encodeByte(size);
+                for (int i = 0; i < size; i++) {
+                    outPacket.encodePosition(new Position());
+                }
+            }
+            if(ai.skillId == 21120019 || ai.skillId == 37121052 || SkillConstants.isShadowAssault(ai.skillId) ||
+                    ai.skillId == 11121014 || ai.skillId == 5101004) {
+                outPacket.encodeByte(0);
+                outPacket.encodePositionInt(ai.teleportPt);
+            }
+            if (SkillConstants.isPoisonAttackSkill(ai.skillId)) {
+                outPacket.encodePosition(new Position());
+            }
+            if (SkillConstants.isUNKAttackSkill(ai.skillId)) {
+                outPacket.encodeInt(0);
+                outPacket.encodeByte(0);
+            }
+        }
+
+        return outPacket;
+    }
+
+    public static OutPacket fballPlaceholder(Char chr, AttackInfo ai) {
+        OutHeader attackType = ai.attackHeader;
+        /*
+        REMOTE_MELEE_ATTACK(753),
+        REMOTE_SHOOT_ATTACK(754),
+        REMOTE_MAGIC_ATTACK(755),
+         */
+        OutPacket outPacket = new OutPacket(OutHeader.REMOTE_MELEE_ATTACK);
+        outPacket.encodeInt(chr.getId());
+
+        outPacket.encodeByte(ai.fieldKey);
+        outPacket.encodeByte(ai.mobCount << 4 | ai.hits);
+        outPacket.encodeInt(chr.getLevel());
+        outPacket.encodeByte(0);//ai.slv);
+        /*if (ai.slv > 0) {
+            outPacket.encodeInt(ai.skillId);
+        }*/
+
+        outPacket.encodeByte(ai.someMask);
+        outPacket.encodeByte(ai.buckShot);
+        outPacket.encodeInt(ai.option3);
+        outPacket.encodeInt(ai.bySummonedID);
+        if ((ai.buckShot & 2) != 0) {
+            outPacket.encodeInt(ai.buckShotSkillID);
+            outPacket.encodeInt(ai.buckShotSlv);
+        }
+        if ((ai.buckShot & 8) != 0) {
+            outPacket.encodeByte(ai.psdTargetPlus);
+        }
+        byte left = (byte) (ai.left ? 1 : 0);
+        outPacket.encodeShort((left << 15) | 0x07);//ai.attackAction);
+        if(ai.attackAction < 0x76A) {
+            outPacket.encodeByte(ai.attackActionType);
+            outPacket.encodeShort(ai.x);
+            outPacket.encodeShort(ai.y);
+            outPacket.encodeByte(ai.showFixedDamage);
+            outPacket.encodeByte(!ai.isDragonAttack);
+            outPacket.encodeByte(ai.actionSpeed);
+            outPacket.encodeByte(ai.mastery);
+            outPacket.encodeInt(ai.bulletID);
+            for(MobAttackInfo mai : ai.mobAttackInfo) {
+                outPacket.encodeInt(mai.mobId);
+                if(mai.mobId > 0) {
+                    outPacket.encodeByte(mai.byteIdk1);
+                    outPacket.encodeByte(mai.byteIdk2);
+                    outPacket.encodeByte(mai.byteIdk3);
+                    outPacket.encodeShort(mai.byteIdk4);
+                    outPacket.encodeInt(0);
+                    outPacket.encodeInt(0);
+                    if(ai.skillId == 80001835 || ai.skillId == 42111002 || ai.skillId == 80011050) {
+                        // Soul Shear
+                        outPacket.encodeByte(ai.hits);
+                        outPacket.encodeInt(0); // not exactly sure
+                    }
+                    for(long dmg : mai.damages) {
+                        outPacket.encodeByte(0); // isCrit
+                        outPacket.encodeLong(dmg);
+                    }
+                    if(SkillConstants.isKinesisPsychicLockSkill(ai.skillId)) {
+                        outPacket.encodeInt(mai.psychicLockInfo);
+                    }
+                    if(ai.skillId == 37111005) {
+                        outPacket.encodeByte(mai.rocketRushInfo);
+                    }
+                }
+            }
+            if(ai.skillId == 2321001 || ai.skillId == 2221052 || ai.skillId == 11121052 || ai.skillId == 12121054) {
+                outPacket.encodeInt(ai.keyDown);
+            } else if(SkillConstants.isSuperNovaSkill(ai.skillId) || SkillConstants.isScreenCenterAttackSkill(ai.skillId) ||
+                    ai.skillId == 101000202 || ai.skillId == 101000102 ||
+                    SkillConstants.isSupportAttackSkill(ai.skillId) ||
+                    ai.skillId == 400041019 ||ai.skillId == 400031016 ||ai.skillId == 400041024 ||
+                    SkillConstants.isWingedJavelin(ai.skillId) || ai.skillId == 400021075 || ai.skillId == 80002452) {
+                outPacket.encodePositionInt(ai.ptAttackRefPoint);
+            }
+            if(SkillConstants.isKeydownSkillRectMoveXY(ai.skillId)) {
+                outPacket.encodePosition(ai.keyDownRectMoveXY);
+            }
+            if(ai.skillId == 51121009) {
+                outPacket.encodeByte(ai.showFixedDamage);
+            }
+            if(ai.skillId == 112110003) { // formation attack
+                outPacket.encodeInt(0);
+            }
+            if(ai.skillId == 42100007) { // Soul Bomb
+                outPacket.encodeShort(0);
+                byte size = 0;
+                outPacket.encodeByte(size);
+                for (int i = 0; i < size; i++) {
+                    outPacket.encodePosition(new Position());
+                }
+            }
+            if(ai.skillId == 21120019 || ai.skillId == 37121052 || SkillConstants.isShadowAssault(ai.skillId) ||
+                    ai.skillId == 11121014 || ai.skillId == 5101004) {
+                outPacket.encodeByte(0);
+                outPacket.encodePositionInt(ai.teleportPt);
+            }
+            if (SkillConstants.isPoisonAttackSkill(ai.skillId)) {
+                outPacket.encodePosition(new Position());
+            }
+            if (SkillConstants.isUNKAttackSkill(ai.skillId)) {
+                outPacket.encodeInt(0);
+                outPacket.encodeByte(0);
+            }
+//            if(ai.attackHeader == )
+            outPacket.encodeArr(new byte[50]);
+        }
+
+        return outPacket;
+    }
 
     public static OutPacket attack(Char chr, AttackInfo ai) {
         OutHeader attackType = ai.attackHeader;
@@ -72,9 +309,6 @@ public class UserRemote {
         outPacket.encodeByte(ai.mobCount << 4 | ai.hits);
         outPacket.encodeInt(chr.getLevel());
         outPacket.encodeByte(ai.slv);
-        if(ai.slv > 0) {
-            outPacket.encodeInt(ai.skillId);
-        }
         if(SkillConstants.isZeroSkill(ai.skillId)) {
             outPacket.encodeByte(ai.zero);
             if(ai.zero != 0) {
