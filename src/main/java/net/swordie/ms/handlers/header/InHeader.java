@@ -1155,7 +1155,6 @@ public enum InHeader {
             OBTACLE_ATOM_COLLISION,
             USER_HIT,
             USER_EMOTION,
-            USER_B2_BODY_REQUEST,
             SPECTRA_ENERGY_UPDATE
     );
 
