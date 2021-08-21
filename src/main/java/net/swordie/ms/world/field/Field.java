@@ -1,5 +1,6 @@
 package net.swordie.ms.world.field;
 
+import io.netty.channel.ChannelHandlerContext;
 import net.swordie.ms.client.Client;
 import net.swordie.ms.client.character.Char;
 import net.swordie.ms.client.character.items.Item;
@@ -13,14 +14,18 @@ import net.swordie.ms.client.party.Party;
 import net.swordie.ms.client.party.PartyMember;
 import net.swordie.ms.connection.OutPacket;
 import net.swordie.ms.connection.packet.*;
+import net.swordie.ms.constants.FlagConstants;
 import net.swordie.ms.constants.GameConstants;
 import net.swordie.ms.constants.ItemConstants;
 import net.swordie.ms.enums.*;
+import net.swordie.ms.flag.Ghost;
+import net.swordie.ms.flag.GhostManager;
 import net.swordie.ms.handlers.EventManager;
 import net.swordie.ms.life.*;
 import net.swordie.ms.life.drop.Drop;
 import net.swordie.ms.life.drop.DropInfo;
 import net.swordie.ms.life.mob.Mob;
+import net.swordie.ms.life.movement.MovementInfo;
 import net.swordie.ms.life.npc.Npc;
 import net.swordie.ms.loaders.ItemData;
 import net.swordie.ms.loaders.containerclasses.ItemInfo;
@@ -29,12 +34,13 @@ import net.swordie.ms.loaders.SkillData;
 import net.swordie.ms.scripts.ScriptManager;
 import net.swordie.ms.scripts.ScriptManagerImpl;
 import net.swordie.ms.scripts.ScriptType;
-import net.swordie.ms.util.FileTime;
-import net.swordie.ms.util.Position;
-import net.swordie.ms.util.Rect;
-import net.swordie.ms.util.Util;
+import net.swordie.ms.util.*;
 import org.apache.log4j.Logger;
+import org.kleric.proximity.DiscordConnector;
+import org.kleric.proximity.DiscordLobbyManager;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,6 +80,7 @@ public class Field {
     private ScriptManagerImpl scriptManagerImpl = new ScriptManagerImpl(this);
     private RuneStone runeStone;
     private ScheduledFuture runeStoneHordesTimer;
+    private ScheduledFuture spawnItemsTimer;
     private int burningFieldLevel;
     private long nextEliteSpawnTime = System.currentTimeMillis();
     private int killedElites;
@@ -86,6 +93,12 @@ public class Field {
     private Map<Integer, List<String>> directionInfo;
     private Clock clock;
     private int channel;
+
+    private boolean soloGhostRace;
+    private boolean ghostRace;
+    private int ghostId;
+
+    public String voiceLobby;
 
     public Field(int fieldID) {
         this.id = fieldID;
@@ -158,6 +171,14 @@ public class Field {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public void setVoiceLobby(String secret) {
+        this.voiceLobby = secret;
+    }
+
+    public String getVoiceLobby() {
+        return voiceLobby;
     }
 
     public FieldType getFieldType() { return fieldType; }
@@ -484,6 +505,33 @@ public class Field {
         return getFootholds().stream().filter(f -> f.getId() == fh).findFirst().orElse(null);
     }
 
+    public void clear() {
+        List<Char> chrs = getChars();
+        for(Char chr : chrs) {
+            if (raceGhosts.containsValue(chr)) continue;
+            if (chr == ghost) continue;
+            chr.setFieldInstanceType(FieldInstanceType.CHANNEL);
+            int returnMap = getForcedReturn();
+            if (returnMap != GameConstants.NO_MAP_ID) {
+                Field field = chr.getOrCreateFieldByCurrentInstanceType(returnMap);
+                chr.warp(field);
+            } else if (id == FlagConstants.MAP_NEW_NIGHT) {
+                Field field = chr.getOrCreateFieldByCurrentInstanceType(FlagConstants.MAP_NEW_NIGHT_LOBBY);
+                chr.warp(field);
+            } else if (id == FlagConstants.MAP_NEW_SUNSET) {
+                Field field = chr.getOrCreateFieldByCurrentInstanceType(FlagConstants.MAP_NEW_SUNSET_LOBBY);
+                chr.warp(field);
+            }
+        }
+        chrs.clear();
+        scriptManagerImpl.stopEvents();
+
+        if (voiceLobby != null) {
+            DiscordLobbyManager.deleteLobby(voiceLobby);
+            voiceLobby = null;
+        }
+    }
+
     public List<Char> getChars() {
         return chars;
     }
@@ -493,8 +541,16 @@ public class Field {
     }
 
     public void addChar(Char chr) {
+        if (isRaceLobby()) {
+            if (voiceLobby == null) {
+                voiceLobby = DiscordLobbyManager.getOrCreateLobby(DiscordLobbyManager.RACE_LOBBY_CAPACITY);
+            }
+        }
         if (!getChars().contains(chr)) {
             getChars().add(chr);
+            if (voiceLobby != null) {
+                DiscordConnector.getInstance().onAddedToLobby(chr, voiceLobby);
+            }
             if (!isUserFirstEnter()) {
                 if (hasUserFirstEnterScript()) {
                     chr.chatMessage("First enter script!");
@@ -508,12 +564,22 @@ public class Field {
                 }
             }
         }
-        broadcastPacket(UserPool.userEnterField(chr), chr);
+        if (!FlagConstants.CAMERA_NAME.equalsIgnoreCase(chr.getName())) {
+            broadcastPacket(UserPool.userEnterField(chr), chr);
+        }
+        DiscordConnector.getInstance().updateAccountCharMap(chr);
+        for (Char c : getChars()) {
+            if (c.isCamera()) {
+                c.refreshCameraField();
+            }
+        }
     }
 
     private boolean hasUserFirstEnterScript() {
         return getOnFirstUserEnter() != null && !getOnFirstUserEnter().equalsIgnoreCase("");
     }
+
+
 
     public void broadcastPacket(OutPacket outPacket, Char exceptChr) {
         getChars().stream().filter(chr -> !chr.equals(exceptChr)).forEach(
@@ -521,9 +587,184 @@ public class Field {
         );
     }
 
+    private HashMap<Integer, Integer> charScores = new HashMap<>();
+
+    // start -2204
+    // goal -2665
+    // right side 2532
+    // y 1778 , 1408 higher up
+    // 2174
+
+    private void sendUpdatedScores() {
+        broadcastPacket(CField.updateRanking(charScores, finishedRanking));
+    }
+
+    private void updateScore(Char chr) {
+        if (!charScores.containsKey(chr.getId())) {
+            return;
+        }
+        Position pos = chr.getPosition();
+        if (chr.lapCount >= 3) {
+            if (charScores.get(chr.getId()) != 730) {
+                charScores.put(chr.getId(), 730);
+                sendUpdatedScores();
+            }
+            return;
+        }
+        int score = 0;
+        if (chr.lapCount == 1) {
+            score = 200;
+        } else if (chr.lapCount == 2) {
+            score = 400;
+        }
+        int x = pos.getX();
+        int y = pos.getY();
+        boolean top;
+        if (x < 100) {
+            top = pos.getY() < 2150;
+        } else {
+            top = pos.getY() < 1800;
+        }
+        if (top) {
+            if (x < -2050) { // near goal
+                score += 120;
+            } else if (x < -1400) {
+                score += 110;
+            } else if (x < -850) {
+                score += 100;
+            } else if (x < 100) {
+                score += 90;
+            } else if (x < 920) {
+                score += 80;
+            } else if (x < 1400) {
+                score += 70;
+            } else {
+                score += 60;
+            }
+        } else {
+            if (x > 2100) {
+                score += 50;
+            } else if (x > 400) {
+                score += 40;
+            } else if (x > -400) {
+                score += 30;
+            } else if (x > -1250) {
+                score += 20;
+            } else if (x > -1750) {
+                score += 10;
+            }
+        }
+
+        if (charScores.get(chr.getId()) != score) {
+            charScores.put(chr.getId(), score);
+            sendUpdatedScores();
+        }
+    }
+
+    public void onMove(Char chr, MovementInfo movementInfo) {
+        if (voiceLobby != null) {
+            refreshLocation();
+        }
+        if (!isRace()) {
+            return;
+        }
+        updateScore(chr);
+        long time = System.currentTimeMillis() - startTime;
+        if (flagFinished > 0) {
+            return;
+        }
+        synchronized (ghosts) {
+            List<MovementHistory> moves = ghosts.computeIfAbsent(chr.getId(), k -> new ArrayList<>());
+            moves.add(new MovementHistory(time, movementInfo));
+        }
+    }
+
+    private long lastProximityRefresh;
+
+    public void refreshLocation() {
+        if (voiceLobby == null) {
+            return;
+        }
+        if (System.currentTimeMillis() - lastProximityRefresh < 100) {
+            return;
+        }
+
+        lastProximityRefresh = System.currentTimeMillis();
+
+        for (Char c : chars) {
+            OutPacket outPacket = new OutPacket(2);
+            outPacket.encodeInt(chars.size() - 1);
+
+            for (Char otherRacer : chars) {
+                if (otherRacer != c) {
+                    Long discordId = DiscordConnector.getInstance().getDiscordId(otherRacer.getAccId());
+                    if (discordId == null) continue;
+                    outPacket.encodeLong(discordId);
+                    outPacket.encodeByte(calculateVolume(computeDist(c, otherRacer)));
+                }
+            }
+            Long discordId = DiscordConnector.getInstance().getDiscordId(c.getAccId());
+            if (discordId == null) continue;
+            ChannelHandlerContext context = DiscordConnector.getInstance().getContext(discordId);
+            if (context == null) {
+                continue;
+            }
+            context.channel().writeAndFlush(outPacket);
+        }
+    }
+
+    private double computeDist(Char c1, Char c2) {
+        Position p1 = c1.getPosition();
+        Position p2 = c2.getPosition();
+        int dX = p1.getX() - p2.getX();
+        int dY = p1.getY() - p2.getY();
+
+        return Math.sqrt(dX * dX + dY * dY);
+    }
+
+    // TODO
+    private int cutoff = 1000;
+    private double ratio = (100.0 / Math.log10(cutoff));
+    private byte calculateVolume(double dist) {
+        if (dist > cutoff) return 0;
+        if (dist < 20) return 100;
+        int volume = (int)(100.0 * (90 / dist));
+
+        return (byte) Math.min(Math.max(0, volume), 100);
+    }
+
+    private final HashMap<Integer, List<MovementHistory>> ghosts = new HashMap<>();
+
+    public boolean isRaceLobby() {
+        return FlagConstants.isRaceLobby(id);
+    }
+
+    public boolean isRace() {
+        switch (id) {
+            case FlagConstants.MAP_SUNSET:
+            case FlagConstants.MAP_DAY:
+            case FlagConstants.MAP_NIGHT:
+            case FlagConstants.MAP_NEW_NIGHT:
+            case FlagConstants.MAP_NEW_SUNSET:
+                return !isChannelField;
+        }
+        return false;
+    }
+
+    private boolean isSoloRace() {
+        return isRace() && chars != null && chars.size() == 1;
+    }
+
     public void removeChar(Char chr) {
         getChars().remove(chr);
-        broadcastPacket(UserPool.userLeaveField(chr), chr);
+        if (!FlagConstants.CAMERA_NAME.equalsIgnoreCase(chr.getName())) {
+            broadcastPacket(UserPool.userLeaveField(chr), chr);
+            for (Char c : getChars()) {
+                if (c.isCamera()) {
+                    c.refreshCameraField();
+                }
+            }
+        }
         // change controllers for which the chr was the controller of
         for (Map.Entry<Life, Char> entry : getLifeToControllers().entrySet()) {
             if (entry.getValue() != null && entry.getValue().equals(chr)) {
@@ -544,6 +785,13 @@ public class Field {
         }
         for (int id : removedList) {
             removeLife(id, false);
+        }
+        if (getChars().isEmpty()) {
+            if (voiceLobby != null) {
+                String voice = voiceLobby;
+                voiceLobby = null;
+                DiscordLobbyManager.deleteLobby(voice);
+            }
         }
     }
 
@@ -587,8 +835,12 @@ public class Field {
         if (getClock() != null) {
             getClock().showClock(chr);
         }
+        boolean isCamera = chr.isCamera();
+        if (isCamera) {
+            chr.refreshCameraField();
+        }
         for (Char c : getChars()) {
-            if (!c.equals(chr)) {
+            if (!c.equals(chr) && !c.isCamera()) {
                 chr.write(UserPool.userEnterField(c));
                 Dragon dragon = c.getDragon();
                 if (dragon != null) {
@@ -612,7 +864,9 @@ public class Field {
 
     public void broadcastPacket(OutPacket outPacket) {
         for (Char c : getChars()) {
-            c.getClient().write(outPacket);
+            if (c.getClient() != null) {
+                c.getClient().write(outPacket);
+            }
         }
     }
 
@@ -1263,6 +1517,334 @@ public class Field {
         EventManager.addEvent(() -> generateMobs(false),
                 (long) (GameConstants.BASE_MOB_RESPAWN_RATE / (getMobRate() * kishinMultiplier)));
     }
+
+    private boolean spawningItems = false;
+
+    private ScheduledFuture timeLimitTimer;
+
+    private long startTime = 0;
+
+    // top level < 1800
+
+    public synchronized void startNewRace() {
+        if (isChannelField || startTime != 0) {
+            return;
+        }
+        flagFinished = 0;
+        startTime = System.currentTimeMillis();
+        startSpawningItems();
+        setTimer(8 * 60);
+        ghostRace = isSoloRace();
+        synchronized (ghosts) {
+            ghosts.clear();
+        }
+        if (isRace() && FlagConstants.SPAWN_GHOST) {
+            spawnGhost();
+        }
+        charScores.clear();
+        finishedRanking.clear();
+        EventManager.addEvent(this::createRanking, 25_000);
+    }
+
+    private void createRanking() {
+        List<Char> rankingList = new ArrayList<>();
+        for (Char c : chars) {
+            if (raceGhosts.containsValue(c)) continue;
+            if (c == ghost) continue;
+            if (FlagConstants.CAMERA_NAME.equalsIgnoreCase(c.getName())) continue;
+            charScores.put(c.getId(), 1);
+            rankingList.add(c);
+        }
+        if (rankingList.isEmpty()) return;
+        broadcastPacket(CField.createRanking(rankingList.size()));
+        broadcastPacket(CField.setRankingNames(rankingList));
+        broadcastPacket(CField.updateRanking(charScores, finishedRanking));
+    }
+
+    private HashMap<Integer, Char> raceGhosts = new HashMap<>();
+    private Char ghost;
+
+    private ScheduledFuture updateGhostFuture;
+
+    private int getNumGhosts() {
+        if (ghostRace) return 1;
+        return 3;
+    }
+
+    public void updateRanking(int b) {
+        HashMap<Integer, Integer> scores = new HashMap<>();
+        for (Char c : chars) {
+            scores.put(c.getId(), 100);
+        }
+        broadcastPacket(CField.updateRanking(scores, b));
+    }
+
+    private void spawnGhosts() {
+        if (!raceGhosts.isEmpty()) return;
+        mapGhosts = GhostManager.getInstance().getGhosts(id);
+        Portal portal = getDefaultPortal();
+        int numGhosts = getNumGhosts();
+        NumberFormat formatter = new DecimalFormat("#0.000");
+        for (int i = 0; i < numGhosts && i < mapGhosts.size(); i++) {
+            Ghost g = mapGhosts.get(i);
+            Char ghostChar = Char.getFromDBByName("Ghost" + (i + 1));
+            ghostChar.setField(this);
+            ghostChar.getAvatarData().getCharacterStat().setPortal(portal.getId());
+            ghostChar.setPosition(new Position(portal.getX(), portal.getY()));
+
+            Char real = Char.getFromDBById(g.id);
+            boolean inRace = false;
+            for (Char c : chars) {
+                if (c.getId() == g.id) {
+                    inRace = true;
+                    break;
+                }
+            }
+
+            String time = formatter.format(g.time / 1000.0);
+            ghostChar.getAvatarData().getCharacterStat().setName(real.getAvatarData().getCharacterStat().getName() + " " + time);
+            if (!inRace) {
+                ghostChar.getAvatarData().setAvatarLook(real.getAvatarData().getAvatarLook());
+            }
+            raceGhosts.put(g.id, ghostChar);
+            addChar(ghostChar);
+        }
+
+        startGhosts();
+    }
+
+    private void spawnGhost() {
+        if (ghost == null) {
+            Portal portal = getDefaultPortal();
+            ghost = Char.getFromDBByName("Ghost");
+            ghost.setField(this);
+            ghost.getAvatarData().getCharacterStat().setPortal(portal.getId());
+            ghost.setPosition(new Position(portal.getX(), portal.getY()));
+            //mapGhost = GhostManager.getInstance().getGhost(id);
+            mapGhosts = GhostManager.getInstance().getGhosts(id);
+            if (mapGhosts.isEmpty()) return;
+            int ghostIndex = 1;
+            for (Char c : chars) {
+                if (ghostRace) {
+                    ghostIndex = c.ghostSetting;
+                    break;
+                }
+            }
+            ghostIndex -= 1;
+            if (ghostIndex >= 0 && ghostIndex < mapGhosts.size()) {
+                mapGhost = mapGhosts.get(ghostIndex);
+            }
+            if (mapGhost == null) {
+                return;
+            }
+            Char real = Char.getFromDBById(mapGhost.id);
+            boolean inRace = false;
+            for (Char c : chars) {
+                if (c.getId() == mapGhost.id) {
+                    inRace = true;
+                    break;
+                }
+            }
+
+            NumberFormat formatter = new DecimalFormat("#0.000");
+            String time = formatter.format(mapGhost.time / 1000.0);
+            ghost.getAvatarData().getCharacterStat().setName(real.getAvatarData().getCharacterStat().getName() + " " + time);
+            if (!inRace) {
+                ghost.getAvatarData().setAvatarLook(real.getAvatarData().getAvatarLook());
+            }
+            ghostId = ghost.getId();
+            addChar(ghost);
+            startGhost();
+        }
+    }
+
+    private List<Ghost> mapGhosts;
+
+    private Ghost mapGhost;
+
+    private HashMap<Integer, ScheduledFuture> ghostFutures = new HashMap<>();
+    private HashMap<Integer, Integer> ghostIndexes = new HashMap<>();
+
+    private void startGhosts() {
+        for (ScheduledFuture f : ghostFutures.values()) {
+            if (!f.isDone() || !f.isCancelled()) {
+                f.cancel(true);
+            }
+        }
+        ghostFutures.clear();
+        ghostIndexes.clear();
+
+        for (Ghost g : mapGhosts) {
+            ghostIndexes.put(g.id, 0);
+            ghostFutures.put(g.id,
+                    EventManager.addEvent(
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    Long diff = updateGhosts(g);
+                                    if (diff != null) {
+                                        ghostFutures.put(g.id, EventManager.addEvent(this, diff));
+                                    }
+                                }
+                            }, 0));
+        }
+    }
+
+    private void startGhost() {
+        if (updateGhostFuture != null && !updateGhostFuture.isDone() && !updateGhostFuture.isCancelled()) {
+            updateGhostFuture.cancel(true);
+        }
+        ghostIndex = 0;
+        if (mapGhost != null) {
+            updateGhostFuture = EventManager.addEvent(this::updateGhost, 0);
+        }
+    }
+
+    private int ghostIndex = 0;
+
+    private Long updateGhosts(Ghost g) {
+        long offset = System.currentTimeMillis() - startTime;
+        int index = ghostIndexes.get(g.id);
+        MovementHistory cur = g.history.get(index);
+        broadcastPacket(UserRemote.move(raceGhosts.get(g.id), cur.movementInfo));
+        index++;
+        ghostIndexes.put(g.id, index);
+        if (g.history.size() > index) {
+            cur = g.history.get(index);
+            return cur.timestamp - offset;
+        }
+        return null;
+    }
+
+    private void updateGhost() {
+        long offset = System.currentTimeMillis() - startTime;
+        MovementHistory cur = mapGhost.history.get(ghostIndex);
+        cur.movementInfo.applyTo(ghost);
+        broadcastPacket(UserRemote.move(ghost, cur.movementInfo));
+        ghostIndex++;
+        if (mapGhost.history.size() > ghostIndex) {
+            cur = mapGhost.history.get(ghostIndex);
+            long diff = cur.timestamp - offset;
+            EventManager.addEvent(this::updateGhost, diff);
+        } else {
+            removeChar(ghost);
+            mapGhost = null;
+        }
+    }
+
+    public long getCreateTime() {
+        return startTime;
+    }
+
+    private int flagFinished = 0;
+
+    public synchronized int incrementAndGetFinish() {
+        flagFinished++;
+        if (flagFinished == 1) {
+            setTimer(ghostRace ? 5 : 60);
+        }
+        return flagFinished;
+    }
+
+    private ArrayList<Integer> finishedRanking = new ArrayList<>();
+
+    public synchronized void addGhost(int place, long time, Char chr) {
+        if (chr.getId() == ghostId) return;
+        if (place != 1) return;
+
+        Ghost g = new Ghost();
+        g.time = time;
+        g.id = chr.getId();
+        finishedRanking.add(g.id);
+        synchronized (ghosts) {
+            if (ghosts.get(g.id) == null) return;
+            g.history = new ArrayList<>(ghosts.remove(g.id));
+            ghosts.clear();
+        }
+        GhostManager.getInstance().updateGhost(id, g);
+    }
+
+    public void setTimer(int seconds) {
+        if (timeLimitTimer != null && !timeLimitTimer.isDone()) {
+            timeLimitTimer.cancel(true);
+        }
+        new Clock(ClockType.SecondsClock, this, seconds);
+        timeLimitTimer = EventManager.addEvent(this::clear, seconds, TimeUnit.SECONDS);
+    }
+
+    public synchronized void startSpawningItems() {
+        if (!spawningItems) {
+            scriptManagerImpl.addEvent(EventManager.addFixedRateEvent(this::spawnItems, FlagConstants.POWERUP_START_TIME, FlagConstants.POWERUP_SPAWN_TIME));
+            spawningItems = true;
+        }
+    }
+
+    private void spawnItems() {
+        if (id != FlagConstants.MAP_DAY && id != FlagConstants.MAP_NIGHT) return;
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_1_X, FlagConstants.NIGHT_SPAWN_1_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_2_X, FlagConstants.NIGHT_SPAWN_2_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_3_X, FlagConstants.NIGHT_SPAWN_3_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_4_X, FlagConstants.NIGHT_SPAWN_4_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_5_X, FlagConstants.NIGHT_SPAWN_5_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_5_X, FlagConstants.NIGHT_SPAWN_5_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_6_X, FlagConstants.NIGHT_SPAWN_6_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_7_X, FlagConstants.NIGHT_SPAWN_7_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_8_X, FlagConstants.NIGHT_SPAWN_8_Y);
+
+        // Regular
+        /*dropPowerUp(FlagConstants.NIGHT_SPAWN_9_X, FlagConstants.NIGHT_SPAWN_9_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_10_X, FlagConstants.NIGHT_SPAWN_10_Y);
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_11_X, FlagConstants.NIGHT_SPAWN_11_Y);*/
+
+        if (getChannel() == 3) {
+            // FBall
+            dropPowerUp(FlagConstants.NIGHT_SPAWN_9_X, FlagConstants.NIGHT_SPAWN_9_Y);
+            dropFBall(FlagConstants.NIGHT_SPAWN_10_X, FlagConstants.NIGHT_SPAWN_10_Y);
+            dropDDash(FlagConstants.NIGHT_SPAWN_11_X, FlagConstants.NIGHT_SPAWN_11_Y);
+        } else {
+            dropPowerUp(FlagConstants.NIGHT_SPAWN_9_X, FlagConstants.NIGHT_SPAWN_9_Y);
+            dropPowerUp(FlagConstants.NIGHT_SPAWN_10_X, FlagConstants.NIGHT_SPAWN_10_Y);
+            dropPowerUp(FlagConstants.NIGHT_SPAWN_11_X, FlagConstants.NIGHT_SPAWN_11_Y);
+        }
+
+        // Rigged
+        /*dropSJump(FlagConstants.NIGHT_SPAWN_9_X, FlagConstants.NIGHT_SPAWN_9_Y);
+        dropDDash(FlagConstants.NIGHT_SPAWN_10_X, FlagConstants.NIGHT_SPAWN_10_Y);
+        dropDDash(FlagConstants.NIGHT_SPAWN_11_X, FlagConstants.NIGHT_SPAWN_11_Y);*/
+
+        dropPowerUp(FlagConstants.NIGHT_SPAWN_12_X, FlagConstants.NIGHT_SPAWN_12_Y);
+    }
+
+    private void dropFBall(int x, int y) {
+        int id = 2023298; // sjump
+        Item item = ItemData.getItemDeepCopy(id);
+        Drop drop = new Drop(-1, item);
+        drop(drop, new Position(x, y));
+    }
+
+    private void dropSJump(int x, int y) {
+        int id = 2023296; // sjump
+        Item item = ItemData.getItemDeepCopy(id);
+        Drop drop = new Drop(-1, item);
+        drop(drop, new Position(x, y));
+    }
+
+    private void dropDDash(int x, int y) {
+        int id = 2023297; // ddash
+        Item item = ItemData.getItemDeepCopy(id);
+        Drop drop = new Drop(-1, item);
+        drop(drop, new Position(x, y));
+    }
+
+    private void dropPowerUp(int x, int y) {
+        //dropSJump(x, y);
+        int index = (int) (Math.random() * FlagConstants.POWERUPS.length);
+        int id = FlagConstants.POWERUPS[index];
+        Item item = ItemData.getItemDeepCopy(id);
+        Drop drop = new Drop(-1, item);
+        drop(drop, new Position(x, y));
+    }
+
 
     public int getMobCapacity() {
         return (int) (getFixedMobCapacity() * (hasKishin() ? GameConstants.KISHIN_MOB_MULTIPLIER : 1));
