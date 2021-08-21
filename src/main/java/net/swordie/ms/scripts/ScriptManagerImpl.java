@@ -59,6 +59,7 @@ import net.swordie.ms.world.field.obtacleatom.ObtacleInRowInfo;
 import net.swordie.ms.world.field.obtacleatom.ObtacleRadianInfo;
 import net.swordie.ms.world.shop.NpcShopDlg;
 import org.apache.log4j.LogManager;
+import org.kleric.proximity.DiscordLobbyManager;
 
 import javax.script.*;
 import java.io.File;
@@ -66,6 +67,8 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Future;
@@ -1216,7 +1219,6 @@ public class ScriptManagerImpl implements ScriptManager {
 
 	@Override
 	public void teleportInField(Position position) {
-
 		chr.write(CField.teleport(position, chr));
 	}
 
@@ -2437,6 +2439,137 @@ public class ScriptManagerImpl implements ScriptManager {
 		chr.write(CField.clock(ClockPacket.removeClock()));
 	}
 
+	public void showActionBar(int actionBar) {
+		chr.write(ActionBarPacket.showActionBar(actionBar));
+	}
+
+	public void hideActionBar(int actionBar) {
+		chr.write(ActionBarPacket.removeActionBar(actionBar));
+	}
+
+	public void refreshFlagActionBar() {
+		chr.refreshFlagActionBar();
+	}
+
+
+	// Flag Race Methods -----------------------------------------------------------------------------------------------
+
+	public void startNewRace() {
+		chr.resetFlagSkills();
+		if (!chr.getField().isChannelField()) {
+			chr.getField().startNewRace();
+		}
+	}
+
+	@Override
+	public void warpFlag(int id, int portalID) {
+		List<Char> fieldChars = getChr().getField().getChars();
+		int ch = getChr().getField().getChannel();
+		stopEvents(); // Stops the FixedRate Event from the Field Script
+		Field field = FieldData.getFieldCopyById(id);
+		if (field == null) {
+			return;
+		}
+		field.setChannel(ch);
+		String lobby = DiscordLobbyManager.getOrCreateLobby(fieldChars.size());
+		field.setVoiceLobby(lobby);
+		for (Char c : fieldChars) {
+			c.setFieldInstanceType(FieldInstanceType.EXPEDITION);
+
+			Portal portal = field.getPortalByID(portalID);
+			if (portal == null) {
+				c.warp(field);
+			} else {
+				c.warp(field, portal);
+			}
+		}
+
+	}
+
+	public void showFlagRanking() {
+		List<Char> characters = (List<Char>) DatabaseManager.getObjListFromDB(Char.class);
+
+		boolean sunset = chr.getFieldID() == FlagConstants.MAP_SUNSET_EXIT;
+		characters.removeIf(next -> sunset ? next.bestTimeSunset == null : next.bestTime == null);
+		characters.sort(Comparator.comparingLong(o -> sunset ? o.bestTimeSunset : o.bestTime));
+
+		StringBuilder sb = new StringBuilder();
+		NumberFormat formatter = new DecimalFormat("#0.000");
+
+		if ((sunset ? chr.bestTimeSunset : chr.bestTime) == null) {
+			sb.append("You haven't raced on this map yet");
+		} else {
+			int rank = -1;
+			for (int i = 0; i < characters.size(); i++) {
+				Char c = characters.get(i);
+				if (c.getId() == chr.getId()) {
+					rank = i;
+					break;
+				}
+			}
+			if (rank != -1) {
+				sb.append("Your current rank: ");
+				sb.append(rank + 1);
+				sb.append(" | ");
+			}
+			sb.append("Your best time is: #r");
+			sb.append(formatter.format((sunset ? chr.bestTimeSunset : chr.bestTime) / 1000.0));
+			sb.append("#k seconds");
+		}
+
+		sb.append("\r\n");
+		for (int i = 0; i < 20 && i < characters.size(); i++) {
+			sb.append(i + 1);
+			sb.append(". ");
+			Char c = characters.get(i);
+			sb.append(c.getName());
+			long time = sunset ? c.bestTimeSunset : c.bestTime;
+			sb.append(" | #r");
+			sb.append(formatter.format(time / 1000.0));
+			sb.append("#k seconds");
+			sb.append("\r\n");
+		}
+
+		sendSayOkay(sb.toString());
+	}
+
+	public void flagGoalReached() {
+		Field field = getChr().getField();
+		if (field.isChannelField()) {
+			return;
+		}
+		// Record score
+		long endTime = System.currentTimeMillis();
+		long startTime = field.getCreateTime();
+		int fieldId = field.getId();
+		long timeMs = endTime - startTime;
+
+		double timeSeconds = timeMs / 1000.0;
+
+		NumberFormat formatter = new DecimalFormat("#0.000");
+		int place = field.incrementAndGetFinish();
+		field.addGhost(place, timeMs, chr);
+		showWeatherNoticeToField(chr.getName() + " finished! Place " + place, WeatherEffNoticeType.SnowySnowAndSprinkledFlowerAndSoapBubbles);
+		if (fieldId == 932200200) { //sunset
+			if (chr.bestTimeSunset == null) {
+				chr.bestTimeSunset = timeMs;
+			} else {
+				chr.bestTimeSunset = Math.min(chr.bestTimeSunset, timeMs);
+			}
+			giveExp(110011);
+		} else if (fieldId == FlagConstants.MAP_NIGHT){
+			if (chr.bestTime == null) {
+				chr.bestTime = timeMs;
+			} else {
+				chr.bestTime = Math.min(chr.bestTime, timeMs);
+			}
+			giveExp(110011);
+		} else {
+			giveExp(110011);
+		}
+		DatabaseManager.saveToDB(chr);
+		sendSayOkay("Your ranking #b" + place + "#k\r\nTime: #r" + formatter.format(timeSeconds) + "#k seconds");
+	}
 
 
 	// Other methods ---------------------------------------------------------------------------------------------------

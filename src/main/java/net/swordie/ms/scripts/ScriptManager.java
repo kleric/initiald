@@ -39,6 +39,8 @@ public interface ScriptManager extends Observer {
 	 */
 	Field getField();
 
+	void warpFlag(int id, int portal);
+
 	/**
 	 * This is the method to use to determine whether or not a script has a {@link Char}.<br>
 	 * Example: "if(sm.isField()) {}"
