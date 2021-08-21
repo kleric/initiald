@@ -37,10 +37,7 @@ import net.swordie.ms.world.field.obtacleatom.ObtacleInRowInfo;
 import net.swordie.ms.world.field.obtacleatom.ObtacleRadianInfo;
 import org.python.antlr.ast.For;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class CField {
@@ -767,6 +764,61 @@ public class CField {
         outPacket.encodeInt(chr.getId());
         outPacket.encodeInt(100);// ?
         outPacket.encodeShort(0);// or 2 bytes ?
+        return outPacket;
+    }
+
+    public static OutPacket createRanking(int maxUsers) {
+        OutPacket outPacket = new OutPacket(OutHeader.FIELD_RANK_CREATE);
+        outPacket.encodeInt(maxUsers);
+        return outPacket;
+    }
+
+    public static OutPacket setRankingNames(List<Char> charList) {
+        OutPacket outPacket = new OutPacket(OutHeader.FIELD_RANK_SET_USERNAME);
+        outPacket.encodeInt(charList.size());
+        for (Char c : charList) {
+            outPacket.encodeInt(c.getId());
+            outPacket.encodeString(c.getName());
+        }
+        return outPacket;
+    }
+
+    public static OutPacket updateRanking(Map<Integer, Integer> score, int num) {
+        OutPacket outPacket = new OutPacket(OutHeader.FIELD_RANK_RESULT);
+        int s = 50;
+        for (Integer id : score.keySet()) {
+            outPacket.encodeInt(score.get(id));
+            outPacket.encodeInt(score.get(id)); // score
+            s += 50;
+        }
+        for (Integer id : score.keySet()) {
+            outPacket.encodeInt(id); // user id
+        }
+        outPacket.encodeByte(num);
+        return outPacket;
+    }
+
+    public static OutPacket updateRanking(Map<Integer, Integer> score, List<Integer> finishedIds) {
+        OutPacket outPacket = new OutPacket(OutHeader.FIELD_RANK_RESULT);
+        List<Integer> ids = new ArrayList<>();
+        // score data
+        for (Integer id : score.keySet()) {
+            outPacket.encodeInt(id); // id
+            outPacket.encodeInt(score.get(id)); // score
+            if (!finishedIds.contains(id)) {
+                ids.add(id);
+            }
+        }
+        Collections.sort(ids, (o1, o2) -> score.get(o2) - score.get(o1));
+
+        for (Integer id : finishedIds) {
+            outPacket.encodeInt(id);
+        }
+        // Ordering
+        for (Integer id : ids) {
+            outPacket.encodeInt(id); // user id
+        }
+        outPacket.encodeByte(0);
         return outPacket;
     }
 
