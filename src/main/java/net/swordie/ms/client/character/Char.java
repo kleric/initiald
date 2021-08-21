@@ -1,10 +1,12 @@
 package net.swordie.ms.client.character;
 
+import io.netty.channel.ChannelHandlerContext;
 import net.swordie.ms.client.character.damage.DamageSkinType;
 import net.swordie.ms.client.character.quest.QuestEx;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatBase;
 import net.swordie.ms.client.jobs.legend.Luminous;
 import net.swordie.ms.constants.*;
+import net.swordie.ms.handlers.header.OutHeader;
 import net.swordie.ms.life.*;
 import net.swordie.ms.life.npc.Npc;
 import net.swordie.ms.loaders.containerclasses.ItemInfo;
@@ -78,6 +80,7 @@ import net.swordie.ms.world.shop.NpcShopItem;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.kleric.proximity.DiscordConnector;
 
 import javax.persistence.*;
 import java.awt.*;
@@ -204,6 +207,15 @@ public class Char {
 
 	@Column(name = "monsterparkcount")
 	private byte monsterParkCount;
+
+	@Column(name = "bestTime")
+	public Long bestTime;
+
+	@Column(name = "bestTimeSunset")
+	public Long bestTimeSunset;
+
+	//@Column(name = "powerups")
+	//public int powerups;
 
 	private int partyID = 0; // Just for DB purposes
 	private int previousFieldID;
@@ -407,6 +419,8 @@ public class Char {
 	@Transient
 	private String blessingOfEmpress = null;
 	@Transient
+	public int ghostSetting = 1;
+	@Transient
 	private Map<Integer, Integer> hyperPsdSkillsCooltimeR = new HashMap<>();
 	@Transient
 	private boolean isInvincible = false;
@@ -422,8 +436,10 @@ public class Char {
     private Map<Integer, PsychicArea> psychicArea = new HashMap<>();
     @Transient
     private Android android;
-	@Transient
+    @Transient
 	private List<NpcShopItem> buyBack = new ArrayList<>();
+    @Transient
+	public int lapCount;
 
 	public Char() {
 		this(0, "", 0, 0, 0, (short) 0, (byte) -1, (byte) -1, 0, 0, new int[]{});
@@ -526,6 +542,28 @@ public class Char {
 		transaction.commit();
 		session.close();
 		return chr;
+	}
+
+	public boolean isCamera() {
+		return FlagConstants.CAMERA_NAME.equalsIgnoreCase(getName());
+	}
+
+	public void refreshCameraField() {
+		DiscordConnector.getInstance().updateAccountCharMap(this);
+		ChannelHandlerContext context = DiscordConnector.getInstance().getContext(this);
+		List<Char> chars = getField().getChars();
+		if (context != null) {
+			int numChars = chars.size() - 1;
+			OutPacket fpacket = new OutPacket(4);
+			fpacket.encodeInt(numChars);
+			for (Char c : chars) {
+				if (!c.equals(this)) {
+					fpacket.encodeInt(c.getId());
+					fpacket.encodeString(c.getName());
+				}
+			}
+			context.channel().writeAndFlush(fpacket);
+		}
 	}
 
 	public AvatarData getAvatarData() {
@@ -2593,6 +2631,7 @@ public class Char {
 				res = getParty() != null ? getParty().getOrCreateFieldById(fieldID) : null;
 				res.setRuneStone(null);
 				break;
+			case EXPEDITION:
 			// TODO expedition
 			default:
 				res = getClient().getChannelInstance().getField(fieldID);
@@ -2742,6 +2781,75 @@ public class Char {
 		}
 	}
 
+	@Transient
+	public int totalS;
+	@Transient
+	public int totalD;
+	@Transient
+	public int totalA;
+	@Transient
+	public int totalF;
+
+	@Transient
+	public int sjumps;
+	@Transient
+	public int ddashes;
+	@Transient
+	public int shields;
+	@Transient
+	public int fballs;
+
+	public void updateFlagSkill(int skillID) {
+		if (!field.isChannelField()) {
+			if (skillID == 80001417) { // D Dash
+				if (ddashes > 0) {
+					ddashes--;
+				}
+				refreshFlagActionBar();
+			} else if (skillID == 80001416) { // S Jump
+				if (sjumps > 0) {
+					sjumps--;
+				}
+				refreshFlagActionBar();
+			} else if (skillID == 80001415) {
+				if (shields > 0) {
+					shields--;
+				}
+				refreshFlagActionBar();
+			} else if (skillID == FlagConstants.SKILL_F) {
+				if (fballs > 0) {
+					fballs--;
+				}
+				refreshFlagActionBar();
+			}
+		}  /*else if (skillID == FlagConstants.SKILL_F) {
+			write(CField.teleport(getOldPosition(), this));
+		}*/
+	}
+
+	public void resetFlagSkills() {
+		sjumps = 0;
+		ddashes = 0;
+		shields = 0;
+		fballs = 0;
+		totalA = 0;
+		totalD = 0;
+		totalS = 0;
+		totalF = 0;
+	}
+
+
+	public void refreshFlagActionBar() {
+		if (field.isChannelField()) {
+			write(ActionBarPacket.enableAll(22));
+		} else {
+			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HIGH_JUMP, sjumps , 1));
+			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.SLIPSTREAM, ddashes , 10));
+			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.CANNON, fballs , 10));
+			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HEAVY_STANDER, shields , 1));
+		}
+	}
+
 	/**
 	 * Adds a given amount of exp to this Char. Immediately checks for level-up possibility, and
 	 * sends the updated
@@ -2826,6 +2934,8 @@ public class Char {
 		write(WvsContext.incNonCombatStatEXPMessage(traitStat, amount));
 	}
 
+	@Transient
+	public long teleportTime;
 	/**
 	 * Writes a packet to this Char's client.
 	 *
@@ -2833,6 +2943,9 @@ public class Char {
 	 */
 	public void write(OutPacket outPacket) {
 		if (getClient() != null) {
+			if (outPacket.getHeader() == OutHeader.TELEPORT.getValue()) {
+				teleportTime = System.currentTimeMillis();
+			}
 			getClient().write(outPacket);
 		}
 	}
@@ -2977,6 +3090,15 @@ public class Char {
 			int itemID = item.getItemId();
 			boolean isConsume = false;
 			boolean isRunOnPickUp = false;
+			boolean isPowerUp = false;
+			switch (itemID) {
+				case 2023295: // Flag: Heavy Stander
+				case 2023296: // Flag: High Jump
+				case 2023297: // Flag: Slipstream
+				case 2023298: // Flag: Fire cannon
+					isPowerUp = true;
+					break;
+			}
 			if (itemID == GameConstants.BLUE_EXP_ORB_ID || itemID == GameConstants.PURPLE_EXP_ORB_ID ||
 					itemID == GameConstants.RED_EXP_ORB_ID) {
 				long expGain = (long) (drop.getMobExp() * GameConstants.getExpOrbExpModifierById(itemID));
@@ -2992,6 +3114,37 @@ public class Char {
 				ItemInfo ii = ItemData.getItemInfoByID(itemID);
 				isConsume = ii.getSpecStats().getOrDefault(SpecStat.consumeOnPickup, 0) != 0;
 				isRunOnPickUp = ii.getSpecStats().getOrDefault(SpecStat.runOnPickup, 0) != 0;
+			}
+			if (isPowerUp) {
+				boolean canPickupPowerup = true;
+				switch (itemID) {
+					//case 2023295: // Flag: Heavy Stander
+					case 2023296: // Flag: High Jump
+						if (sjumps != 0) {
+							canPickupPowerup = false;
+						}
+						break;
+					case 2023297: // Flag: Slipstream
+						if (ddashes >= 10) {
+							canPickupPowerup = false;
+						}
+						break;
+					case 2023298: // Flag: Fire cannon
+						if (fballs >= 10) {
+							canPickupPowerup = false;
+						}
+						break;
+					case 2023295:
+						if (shields != 0) {
+							canPickupPowerup = false;
+						}
+						break;
+				}
+				if (canPickupPowerup) {
+					consumeItemOnPickup(item);
+				}
+				dispose();
+				return canPickupPowerup;
 			}
 			if (isConsume) {
 				consumeItemOnPickup(item);
@@ -3036,6 +3189,39 @@ public class Char {
 				id = itemID;
 			}
 			write(WvsContext.monsterBookSetCard(id));
+		} else {
+			boolean consume = false;
+			switch (itemID) {
+				case 2023295:
+					consume = true;
+					shields++;
+					totalA++;
+					refreshFlagActionBar();
+					break;
+				case 2023296:
+					consume = true;
+					sjumps = 1;
+					totalS++;
+					refreshFlagActionBar();
+					break;
+				case 2023297:
+					consume = true;
+					ddashes++;
+					totalD++;
+					refreshFlagActionBar();
+					break;
+				case 2023298:
+					consume = true;
+					fballs++;
+					totalF++;
+					refreshFlagActionBar();
+					break;
+				default:
+					chatMessage(ChatType.Mob, String.format("Unhandled stat change item %d", itemID));
+			}
+			if (consume) {
+				consumeItem(item);
+			}
 		}
 	}
 
@@ -3048,7 +3234,6 @@ public class Char {
 
 		return getAvatarData().getCharacterStat().getName();
 	}
-
 
 	public void encodeChatInfo(OutPacket outPacket, String msg) {
 		// vm'd sub
@@ -3557,6 +3742,9 @@ public class Char {
 						GuildResult.notifyLoginOrLogout(g, gm, online, online)), this);
 			}
 		}
+		if (online) {
+			getWorld().broadcastPacket(WvsContext.broadcastMsg(BroadcastMsg.notice(getName() + " has logged in")));
+		}
 		this.online = online;
 		if (getParty() != null) {
 			PartyMember pm = getParty().getPartyMemberByID(getId());
@@ -3600,6 +3788,9 @@ public class Char {
 		ChatHandler.removeClient(getAccId());
 		setOnline(false);
 		getJobHandler().handleCancelTimer(this);
+		if (getField().getVoiceLobby() != null) {
+			DiscordConnector.getInstance().onRemovedFromLobby(this);
+		}
 		getField().removeChar(this);
 		getAccount().setCurrentChr(null);
 		if (!isChangingChannel()) {
