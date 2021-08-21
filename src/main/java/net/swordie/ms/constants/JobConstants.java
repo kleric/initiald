@@ -746,7 +746,7 @@ public class JobConstants {
         CYGNUS(2, JobFlag.ENABLED, JobEnum.NOBLESSE),
         ARAN(3, JobFlag.DISABLED, JobEnum.LEGEND),
         EVAN(4, JobFlag.DISABLED, JobEnum.EVAN_NOOB),
-        MERCEDES(5, JobFlag.DISABLED, JobEnum.MERCEDES),
+        MERCEDES(5, JobFlag.ENABLED, JobEnum.MERCEDES),
         DEMON(6, JobFlag.ENABLED, JobEnum.DEMON_SLAYER),
         PHANTOM(7, JobFlag.DISABLED, JobEnum.PHANTOM),
         DUAL_BLADE(8, JobFlag.DISABLED, JobEnum.BEGINNER),
