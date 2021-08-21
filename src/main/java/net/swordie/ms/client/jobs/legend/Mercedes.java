@@ -119,11 +119,7 @@ public class Mercedes extends Job {
     @Override
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
-        /*Item item = ItemData.getItemDeepCopy(1352000); // Secondary
-        chr.addItemToInventory(item);*/
-
-        CharacterStat cs = chr.getAvatarData().getCharacterStat();
-        cs.setPosMap(932200006);
+        chr.getAvatarData().getAvatarLook().setDrawElfEar(true);
     }
 
 

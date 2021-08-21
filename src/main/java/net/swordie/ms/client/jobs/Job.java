@@ -4,6 +4,7 @@ import net.swordie.ms.client.Client;
 import net.swordie.ms.client.character.Char;
 import net.swordie.ms.client.character.CharacterStat;
 import net.swordie.ms.client.character.info.HitInfo;
+import net.swordie.ms.client.character.items.Equip;
 import net.swordie.ms.client.character.items.Item;
 import net.swordie.ms.client.character.runestones.RuneStone;
 import net.swordie.ms.client.character.skills.Option;
@@ -28,6 +29,7 @@ import net.swordie.ms.connection.InPacket;
 import net.swordie.ms.connection.packet.UserLocal;
 import net.swordie.ms.connection.packet.UserRemote;
 import net.swordie.ms.connection.packet.WvsContext;
+import net.swordie.ms.constants.FlagConstants;
 import net.swordie.ms.constants.GameConstants;
 import net.swordie.ms.constants.JobConstants;
 import net.swordie.ms.constants.SkillConstants;
@@ -717,25 +719,42 @@ public abstract class Job {
 
 	public void setCharCreationStats(Char chr) {
 		CharacterStat characterStat = chr.getAvatarData().getCharacterStat();
-		characterStat.setLevel(1);
+		characterStat.setLevel(200);
 		characterStat.setStr(12);
 		characterStat.setDex(5);
 		characterStat.setInt(4);
 		characterStat.setLuk(4);
-		characterStat.setHp(50);
-		characterStat.setMaxHp(50);
+		characterStat.setHp(20000);
+		characterStat.setMaxHp(20000);
 		characterStat.setMp(5);
 		characterStat.setMaxMp(5);
 
-		characterStat.setPosMap(100000000);// should be handled for eah job not here
-		Item whitePot = ItemData.getItemDeepCopy(2000002);
-		whitePot.setQuantity(100);
-		chr.addItemToInventory(whitePot);
-		Item manaPot = ItemData.getItemDeepCopy(2000006);
-		manaPot.setQuantity(100);
-		chr.addItemToInventory(manaPot);
-		Item hyperTp = ItemData.getItemDeepCopy(5040004);
-		chr.addItemToInventory(hyperTp);
+		characterStat.setPosMap(FlagConstants.MAP_EVENT_AREA);// should be handled for eah job not here
 
+		giveItem(chr, 1072239, (short) 1); // Snowshoes
+		giveItem(chr, 1332007, (short) 1); // Fruit Knife
+
+		// Sauna Robes
+		giveItem(chr, 1050018, (short) 1);
+		giveItem(chr, 1051017, (short) 1);
+
+		giveItem(chr, 2049764, (short) 1); // pot scroll
+ 		giveItem(chr, 5062010, (short) 50); // black cubes
+
+	}
+
+	private static void giveItem(Char chr, int id, short quantity) {
+		Equip equip = ItemData.getEquipDeepCopyFromID(id, true);
+		if (equip == null) {
+			Item item = ItemData.getItemDeepCopy(id, true);
+			if (item == null) {
+				chr.chatMessage(ChatType.Mob, String.format("Could not find an item with id %d", id));
+				return;
+			}
+			item.setQuantity(quantity);
+			chr.addItemToInventory(item);
+		} else {
+			chr.addItemToInventory(InvType.EQUIP, equip, false);
+		}
 	}
 }

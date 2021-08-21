@@ -727,6 +727,5 @@ public class Ark extends Job {
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
         chr.getAvatarData().getAvatarLook().setDrawElfEar(true);
-        chr.getAvatarData().getCharacterStat().setPosMap(402090000);
     }
 }

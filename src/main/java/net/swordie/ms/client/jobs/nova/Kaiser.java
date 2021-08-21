@@ -158,7 +158,6 @@ public class Kaiser extends Job {
         super.setCharCreationStats(chr);
         CharacterStat cs = chr.getAvatarData().getCharacterStat();
         cs.setJob(6000);
-        cs.setPosMap(940001000);
     }
 
 

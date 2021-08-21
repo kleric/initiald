@@ -411,17 +411,6 @@ public class Kinesis extends Job {
     @Override
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
-        CharacterStat cs = chr.getAvatarData().getCharacterStat();
-        cs.setPosMap(331001100);
-        cs.setLevel(10);
-        cs.setStr(4);
-        cs.setDex(4);
-        cs.setInt(52);
-        cs.setLuk(4);
-        cs.setMaxHp(374);
-        cs.setHp(374);
-        cs.setMaxMp(5);
-        cs.setMp(5);
         chr.addSkill(PSYCHIC_ATTACK, 1, 1);
     }
 }

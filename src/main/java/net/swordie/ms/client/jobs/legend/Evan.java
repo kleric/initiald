@@ -502,8 +502,6 @@ public class Evan extends Job {
     @Override
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
-        CharacterStat cs = chr.getAvatarData().getCharacterStat();
-        cs.setPosMap(900010000);
     }
     @Override
     public void handleLevelUp() {

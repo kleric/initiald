@@ -640,6 +640,5 @@ public class Luminous extends Job {
     @Override
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
-        chr.getAvatarData().getCharacterStat().setPosMap(927020080);
     }
 }

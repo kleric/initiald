@@ -621,7 +621,6 @@ public class Xenon extends Job {
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
         CharacterStat cs = chr.getAvatarData().getCharacterStat();
-        cs.setPosMap(931060089);
     }
 }
 

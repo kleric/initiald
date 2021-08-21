@@ -676,7 +676,6 @@ public class Hayato extends Job {
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
         CharacterStat cs = chr.getAvatarData().getCharacterStat();
-        cs.setPosMap(807100010);
     }
 
     @Override

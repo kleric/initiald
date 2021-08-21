@@ -597,6 +597,5 @@ public class Mihile extends Job {
     @Override
     public void setCharCreationStats(Char chr) {
         super.setCharCreationStats(chr);
-        chr.getAvatarData().getCharacterStat().setPosMap(913070000);
     }
 }
