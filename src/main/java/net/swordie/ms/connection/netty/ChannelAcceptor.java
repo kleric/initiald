@@ -47,13 +47,12 @@ public class ChannelAcceptor implements Runnable {
 
                     ch.attr(CLIENT_KEY).set(c);
                     ch.attr(Client.AES_CIPHER).set(new AESCipher());
-
-                    EventManager.addFixedRateEvent(c::sendPing, 0, 10000);
                 }
             });
 
             b.childOption(ChannelOption.TCP_NODELAY, true);
             b.childOption(ChannelOption.SO_KEEPALIVE, true);
+            b.childOption(ChannelOption.SO_TIMEOUT, 120_000);
 
             // Bind and start to accept incoming connections.
             ChannelFuture f = b.bind(channel.getPort()).sync();

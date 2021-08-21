@@ -6,18 +6,17 @@ import net.swordie.ms.client.Account;
 import net.swordie.ms.client.Client;
 import net.swordie.ms.client.character.Char;
 import net.swordie.ms.connection.InPacket;
-import net.swordie.ms.connection.packet.Login;
-import net.swordie.ms.enums.ChatType;
 import net.swordie.ms.handlers.AdminHandler;
 import net.swordie.ms.handlers.ChatHandler;
+import net.swordie.ms.handlers.EventManager;
 import net.swordie.ms.handlers.LoginHandler;
 import net.swordie.ms.handlers.header.InHeader;
-import net.swordie.ms.world.World;
 import net.swordie.ms.world.WorldHandler;
 import net.swordie.ms.world.shop.cashshop.CashShopHandler;
 import org.apache.log4j.LogManager;
 
 import java.io.IOException;
+import java.util.concurrent.ScheduledFuture;
 
 import static net.swordie.ms.connection.netty.NettyClient.CLIENT_KEY;
 
@@ -29,17 +28,41 @@ public class ChannelHandler extends SimpleChannelInboundHandler<InPacket> {
 
     private static final org.apache.log4j.Logger log = LogManager.getRootLogger();
 
+    private ScheduledFuture pingFuture;
+
+    private long lastPong;
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        NettyClient o = ctx.channel().attr(CLIENT_KEY).get();
+        //NettyClient o = ctx.channel().attr(CLIENT_KEY).get();
 //        if(!LoginAcceptor.channelPool.containsKey(o.getIP())) {
 //            System.out.println("[Dropping currently unknown client]");
 //            o.close();
 //        }
+        Client c = (Client) ctx.channel().attr(CLIENT_KEY).get();
+        if (c != null) {
+            lastPong = System.currentTimeMillis();
+            pingFuture = EventManager.addFixedRateEvent(() -> {
+                c.sendPing();
+                if (System.currentTimeMillis() - lastPong > 120_000) {
+                    NettyClient o = ctx.channel().attr(CLIENT_KEY).get();
+                    o.close();
+                }
+
+            }, 0, 10000);
+        }
+    }
+
+    private void handlePong() {
+        lastPong = System.currentTimeMillis();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
+        if (pingFuture != null) {
+            pingFuture.cancel(true);
+            pingFuture = null;
+        }
         log.debug("[ChannelHandler] | Channel inactive.");
         Client c = (Client) ctx.channel().attr(CLIENT_KEY).get();
         Account acc = c.getAccount();
@@ -193,6 +216,7 @@ public class ChannelHandler extends SimpleChannelInboundHandler<InPacket> {
                 break;
             case PONG:
                 LoginHandler.handlePong(c, inPacket);
+                handlePong();
                 break;
             case CHECK_LOGIN_AUTH_INFO:
                 LoginHandler.handleCheckLoginAuthInfo(c, inPacket);

@@ -22,7 +22,7 @@ import static net.swordie.ms.connection.netty.NettyClient.CLIENT_KEY;
  */
 public class LoginAcceptor implements Runnable{
 
-    public static Map<String, Channel> channelPool = new HashMap<>();
+    //public static Map<String, Channel> channelPool = new HashMap<>();
     private static final org.apache.log4j.Logger log = LogManager.getRootLogger();
     @Override
     public void run() {
@@ -50,14 +50,14 @@ public class LoginAcceptor implements Runnable{
                     c.write(Login.sendConnect(riv, siv, c.getPort() == 8484));
 //                  c.write("hi".getBytes());
 
-                    channelPool.put(c.getIP(), ch);
+                    //channelPool.put(c.getIP(), ch);
 
 
                     ch.attr(CLIENT_KEY).set(c);
                     ch.attr(Client.AES_CIPHER).set(new AESCipher());
 
                     //c.write(Login.setOpcodes());
-                    EventManager.addFixedRateEvent(c::sendPing, 0, 10000);
+                    //EventManager.addFixedRateEvent(c::sendPing, 0, 10000);
                 }
             });
 
