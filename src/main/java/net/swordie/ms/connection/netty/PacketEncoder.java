@@ -37,10 +37,11 @@ public final class PacketEncoder extends MessageToByteEncoder<Packet> {
     private static final org.apache.log4j.Logger log = LogManager.getRootLogger();
     private static final int uSeqBase = (short) ((((0xFFFF - nVersion) >> 8) & 0xFF) | (((0xFFFF - nVersion) << 8) & 0xFF00));
 
+    private final boolean bEncryptData = true;
+
     @Override
     protected void encode(ChannelHandlerContext chc, Packet outPacket, ByteBuf bb) {
         byte[] data = outPacket.getData();
-        boolean bEncryptData = true;
         NettyClient c = chc.channel().attr(NettyClient.CLIENT_KEY).get();
         AESCipher ac = chc.channel().attr(NettyClient.AES_CIPHER).get();
         if (c != null) {
