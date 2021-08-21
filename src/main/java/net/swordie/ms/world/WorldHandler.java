@@ -7,11 +7,10 @@ import net.swordie.ms.client.alliance.Alliance;
 import net.swordie.ms.client.alliance.AllianceResult;
 import net.swordie.ms.client.anticheat.Offense;
 import net.swordie.ms.client.character.*;
-import net.swordie.ms.client.character.commands.AdminCommand;
-import net.swordie.ms.client.character.commands.AdminCommands;
-import net.swordie.ms.client.character.commands.Command;
+import net.swordie.ms.client.character.commands.*;
 import net.swordie.ms.client.character.damage.DamageSkinSaveData;
 import net.swordie.ms.client.character.damage.DamageSkinType;
+import net.swordie.ms.client.character.info.ExpIncreaseInfo;
 import net.swordie.ms.client.character.skills.info.SkillInfo;
 import net.swordie.ms.client.character.items.*;
 import net.swordie.ms.client.character.potential.CharacterPotential;
@@ -86,6 +85,7 @@ import net.swordie.ms.life.mob.skill.MobSkillID;
 import net.swordie.ms.life.mob.skill.MobSkillStat;
 import net.swordie.ms.life.movement.Movement;
 import net.swordie.ms.life.movement.MovementInfo;
+import net.swordie.ms.life.movement.MovementJump;
 import net.swordie.ms.life.npc.Npc;
 import net.swordie.ms.life.npc.NpcMessageType;
 import net.swordie.ms.life.pet.Pet;
@@ -109,12 +109,14 @@ import net.swordie.ms.world.shop.NpcShopDlg;
 import net.swordie.ms.world.shop.NpcShopItem;
 import net.swordie.ms.world.shop.ShopRequestType;
 import net.swordie.ms.world.shop.cashshop.CashShop;
+import net.swordie.ms.world.shop.result.MsgShopResult;
 import net.swordie.ms.world.shop.result.ShopResult;
 import net.swordie.ms.world.shop.result.ShopResultType;
 import org.apache.log4j.LogManager;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
+import org.kleric.proximity.DiscordConnector;
 
 import javax.script.ScriptException;
 import javax.swing.Timer;
@@ -172,6 +174,7 @@ public class WorldHandler {
         chr.rebuildQuestExValues(false);
         c.setChr(chr);
         c.getChannelInstance().addChar(chr);
+        DiscordConnector.getInstance().updateAccountCharMap(chr);
         chr.setJobHandler(JobManager.getJobById(chr.getJob(), chr));
         chr.setFieldInstanceType(FieldInstanceType.CHANNEL);
         Server.getInstance().addAccount(acc);
@@ -262,6 +265,7 @@ public class WorldHandler {
         movementInfo.applyTo(chr);
         chr.getField().checkCharInAffectedAreas(chr);
         chr.getField().broadcastPacket(UserRemote.move(chr, movementInfo), chr);
+        chr.getField().onMove(chr, movementInfo);
         // client has stopped moving. this might not be the best way
         if (chr.getMoveAction() == 4 || chr.getMoveAction() == 5) {
             TemporaryStatManager tsm = c.getChr().getTemporaryStatManager();
@@ -295,26 +299,34 @@ public class WorldHandler {
         String msg = inPacket.decodeString();
         boolean append = inPacket.decodeByte() == 1;
 
-        if (msg.length() > 0 && msg.charAt(0) == '@') {
-            if (msg.equalsIgnoreCase("@check")) {
-                chr.dispose();
-                Map<BaseStat, Integer> basicStats = chr.getTotalBasicStats();
-                StringBuilder sb = new StringBuilder();
-                List<BaseStat> sortedList = Arrays.stream(BaseStat.values()).sorted(Comparator.comparing(Enum::toString)).collect(Collectors.toList());
-                for (BaseStat bs : sortedList) {
-                    sb.append(String.format("%s = %d, ", bs, basicStats.getOrDefault(bs, 0)));
+        if (msg.charAt(0) == PlayerCommand.getPrefix()) {
+            boolean executed = false;
+            String command = msg.split(" ")[0].replace("@", "");
+            for (Class clazz : PlayerCommands.class.getClasses()) {
+                Command cmd = (Command) clazz.getAnnotation(Command.class);
+                boolean matchingCommand = false;
+                for (String name : cmd.names()) {
+                    if (name.equalsIgnoreCase(command)) {
+                        matchingCommand = true;
+                        break;
+                    }
                 }
-                chr.chatMessage(Mob, String.format("X=%d, Y=%d %n Stats: %s", chr.getPosition().getX(), chr.getPosition().getY(), sb));
-                ScriptManagerImpl smi = chr.getScriptManager();
-                // all but field
-                smi.stop(ScriptType.Portal);
-                smi.stop(ScriptType.Npc);
-                smi.stop(ScriptType.Reactor);
-                smi.stop(ScriptType.Quest);
-                smi.stop(ScriptType.Item);
-
-            } else if (msg.equalsIgnoreCase("@save")) {
-                DatabaseManager.saveToDB(chr);
+                if (matchingCommand) {
+                    executed = true;
+                    String[] split = null;
+                    try {
+                        PlayerCommand playerCommand = (PlayerCommand) clazz.getConstructor().newInstance();
+                        Method method = clazz.getDeclaredMethod("execute", Char.class, String[].class);
+                        split = msg.split(" ");
+                        method.invoke(playerCommand, c.getChr(), split);
+                    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException
+                            | InstantiationException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            if (!executed) {
+                chr.chatMessage(Expedition, "Unknown command \"" + command + "\"");
             }
         } else if (msg.charAt(0) == AdminCommand.getPrefix()
                 && chr.getAccount().getPrivateStatusIDFlag().ordinal() > PrivateStatusIDFlag.NONE.ordinal()) {
@@ -449,17 +461,45 @@ public class WorldHandler {
         chr.chatMessage(attackInfo.skillId + "");
         int skillID = attackInfo.skillId;
         Field field = chr.getField();
-        if ((field.getFieldLimit() & FieldOption.SkillLimit.getVal()) > 0 ||
-                (field.getFieldLimit() & FieldOption.MoveSkillOnly.getVal()) > 0) {
+        //if (skillID != FlagConstants.SKILL_F) {
+            if (((field.getFieldLimit() & FieldOption.SkillLimit.getVal()) > 0 ||
+                    (field.getFieldLimit() & FieldOption.MoveSkillOnly.getVal()) > 0)) {
+                chr.updateFlagSkill(skillID);
+                if (skillID == FlagConstants.SKILL_F) {
+                    chr.getField().broadcastPacket(UserRemote.fballPlaceholder(chr, attackInfo), chr);
+                }
+                chr.dispose();
+                return;
+            }
+        //}
+        /*if (skillID == FlagConstants.SKILL_F) {
+            chr.updateFlagSkill(skillID);
+
+            SkillInfo si = SkillData.getSkillInfoById(skillID);
+            if (si != null && si.getExtraSkillInfo().size() > 0) {
+                chr.getField().broadcastPacket(CField.registerExtraSkill(chr.getPosition(), skillID, si.getExtraSkillInfo().keySet(), attackInfo.left));
+            }
+                chr.chatMessage(Mob, "SkillID: dfdf" + skillID);
+            for (Char af : field.getChars()) {
+                Effect effect = Effect.skillAffectedSelect(skillID, (byte) attackInfo.slv, 100, true);
+                af.write(User.effect(effect));
+                af.write(MobPool.specialEffectBySkill(af, skillID, chr.getId(), (short) 1));
+                Option o = new Option(skillID, (byte) attackInfo.slv);
+                o.xOption = si.getValue(SkillStat.x, attackInfo.slv);
+                o.nOption = 1700;
+                af.getTemporaryStatManager().putCharacterStatValueFromMobSkill(Slow, o);
+                af.getTemporaryStatManager().sendSetStatPacket();
+            }
+            chr.getField().broadcastPacket(UserRemote.attack(chr, attackInfo), chr);
             chr.dispose();
             return;
-        }
+        }*/
         boolean summonedAttack = attackInfo.attackHeader == OutHeader.SUMMONED_ATTACK;
         boolean multiAttack = SkillConstants.isMultiAttackCooldownSkill(skillID);
-        if (!summonedAttack && !multiAttack && !chr.applyMpCon(attackInfo.skillId, attackInfo.slv)) {
+        if (!summonedAttack && !multiAttack && !chr.applyMpCon(attackInfo.skillId, attackInfo.slv) && skillID != FlagConstants.SKILL_F) {
             return;
         }
-        if (summonedAttack || chr.checkAndSetSkillCooltime(skillID) || chr.hasSkillCDBypass() || multiAttack) {
+        if (summonedAttack || chr.checkAndSetSkillCooltime(skillID) || chr.hasSkillCDBypass() || multiAttack || skillID == FlagConstants.SKILL_F) {
             int slv = attackInfo.slv;
             chr.chatMessage(Mob, "SkillID: " + skillID);
             Job sourceJobHandler = chr.getJobHandler();
@@ -2304,7 +2344,7 @@ public class WorldHandler {
                 chr.dispose();
             }
         }
-
+        chr.dispose();
     }
 
     public static void handleUserSitRequest(Char chr, InPacket inPacket) {
@@ -2638,6 +2678,40 @@ public class WorldHandler {
         boolean byItemOption = inPacket.decodeByte() != 0;
         if (GameConstants.isValidEmotion(emotion)) {
             chr.getField().broadcastPacket(UserRemote.emotion(chr.getId(), emotion, duration, byItemOption), chr);
+            if (emotion == 7) {
+                long dT = System.currentTimeMillis() - chr.getField().getCreateTime();
+                float expMultiplier = Math.min(1.0f, dT / 140_000f);;
+                int targetField = 932200005; // night
+                switch (chr.getField().getId()) {
+                    case FlagConstants.MAP_SUNSET:
+                        targetField = 932200003; // sunset
+                        expMultiplier = Math.min(1.0f, dT / 60_000f);
+                        break;
+                    case FlagConstants.MAP_DAY:
+                        targetField = 932200001; // day
+                        break;
+                    case FlagConstants.MAP_NEW_NIGHT:
+                        targetField = FlagConstants.MAP_NEW_NIGHT_LOBBY;
+                        break;
+                    case FlagConstants.MAP_NEW_SUNSET:
+                        targetField = FlagConstants.MAP_NEW_SUNSET_LOBBY;
+                        break;
+                }
+                if (chr.getField().isRace()) {
+                    long expGiven = (long) (110011 * expMultiplier);
+                    ExpIncreaseInfo eii = new ExpIncreaseInfo();
+                    eii.setLastHit(true);
+                    eii.setIncEXP(Util.maxInt(expGiven));
+                    eii.setOnQuest(true);
+                    chr.addExp(expGiven, eii);
+                }
+                Field toField = chr.getClient().getChannelInstance().getField(targetField);
+                if (toField != null) {
+                    chr.warp(toField);
+                }
+            } else if (emotion == 6) {
+                PlayerCommands.LoadLocation.execute(c.getChr(), new String[] {"load"});
+            }
         }
     }
 
@@ -3348,6 +3422,17 @@ public class WorldHandler {
         if (GameConstants.getMaplerunnerField(field.getId()) == -1 &&
                 ((field.getFieldLimit() & FieldOption.SkillLimit.getVal()) > 0 ||
                 (field.getFieldLimit() & FieldOption.MoveSkillOnly.getVal()) > 0)) {
+            inPacket.decodeInt(); // crc
+            int skillID = inPacket.decodeInt();
+            byte slv = inPacket.decodeByte();
+            chr.updateFlagSkill(skillID);
+            if (skillID == 80001415) {
+                TemporaryStatManager tsm = chr.getTemporaryStatManager();
+                tsm.putCharacterStatValue(Stance, new Option(skillID, (byte) 1));
+                tsm.sendSetStatPacket();
+                Effect effect = Effect.skillAffected(skillID, slv, 0);
+                chr.write(User.effect(effect));
+            }
             chr.dispose();
             return;
         }
@@ -5650,6 +5735,11 @@ public class WorldHandler {
     }
 
     public static void handleUserMapTransferRequest(Char chr, InPacket inPacket) {
+        if (chr.teleportTime != 0) {
+            long ping = System.currentTimeMillis() - chr.teleportTime;
+            chr.teleportTime = 0;
+            chr.chatMessage("Ping: " + ping);
+        }
         chr.punishLieDetectorEvasion();
 
         byte mtType = inPacket.decodeByte();
@@ -6292,17 +6382,66 @@ public class WorldHandler {
     }
 
     public static void handleB2BodyRequest(Char chr, InPacket inPacket) {
-        short type = inPacket.decodeShort();
+        short type = inPacket.decodeShort(); // request type
         int ownerCID = inPacket.decodeInt();
         int bodyIdCounter = inPacket.decodeInt();
-        Position offsetPos = inPacket.decodePosition();
+        Position objectPos = inPacket.decodePosition();
+        Position characterPos = inPacket.decodePosition();
+        // 4 bytes
         int skillID = inPacket.decodeInt();
         boolean isLeft = inPacket.decodeByte() != 0;
         inPacket.decodeByte();
-        inPacket.decodeShort();
-        inPacket.decodeShort();
-        inPacket.decodeShort();
-        Position forcedPos = inPacket.decodePositionInt();
+        short s1 = inPacket.decodeShort();
+        short s2 = inPacket.decodeShort();
+        short s3 = inPacket.decodeShort();
+        inPacket.decodeInt(); //dunno
+        Position forcedPos = inPacket.decodePosition();
+
+        short s4 = inPacket.decodeShort();
+        short s5 = inPacket.decodeShort();
+        short s6 = inPacket.decodeShort();
+
+        Position p3 = inPacket.decodePositionInt();
+        if (isLeft) {
+            p3.setX(p3.getX() * -1);
+        }
+
+        if (skillID == FlagConstants.SKILL_F) {
+            List<Char> fieldChrs = chr.getField().getChars();
+
+            OutPacket hitP = new OutPacket(OutHeader.B2_BODY_RESULT);
+            hitP.encodeShort(type); // 4
+            hitP.encodeInt(ownerCID); // Character ID
+            hitP.encodeInt(chr.getFieldID()); // Map Id
+            hitP.encodeShort(1); // number of b2 bodies
+
+            hitP.encodeByte(1); //ignored looks like
+            hitP.encodePosition(objectPos); // short short
+            hitP.encodeInt(3000); // time lifespan of object
+            hitP.encodeShort(s1);
+            hitP.encodeShort(s2);
+            hitP.encodeShort(s3);
+            hitP.encodeByte(0); // seems to check collision
+            /*if (s3 >= -1) {
+                hitP.encodeString("");
+            }*/
+            hitP.encodeInt(0);
+            hitP.encodeInt(skillID); // skill ID
+            hitP.encodeByte(0);
+            hitP.encodeInt(0);
+            hitP.encodeInt(skillID);
+            hitP.encodeByte(0);
+
+            hitP.encodePositionInt(p3);
+
+            for (Char cr : fieldChrs) {
+                if (cr == chr) continue;
+
+                if (!cr.getTemporaryStatManager().hasStatBySkillId(FlagConstants.SKILL_A)) {
+                    cr.write(hitP);
+                }
+            }
+        }
     }
 
     public static void handleUserRegisterPetAutoBuffRequest(Char chr, InPacket inPacket) {
@@ -6729,6 +6868,7 @@ public class WorldHandler {
 
         Char driverChr = field.getCharByID(driverChrId);
         if(driverChr == null ) {
+            chr.write(User.followCharacter(chr.getId(), 0, false, new Position()));
             return;
         }
         driverChr.write(WvsContext.setPassenserRequest(chr.getId()));
@@ -6748,7 +6888,7 @@ public class WorldHandler {
             }
 
         } else {
-            requestorChr.write(User.followCharacter(chr.getId(), false, new Position()));
+            requestorChr.write(User.followCharacter(requestorChrId, chr.getId(), false, new Position()));
 
         }
     }
