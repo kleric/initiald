@@ -512,14 +512,14 @@ public class Field {
             if (chr == ghost) continue;
             chr.setFieldInstanceType(FieldInstanceType.CHANNEL);
             int returnMap = getForcedReturn();
-            if (returnMap != GameConstants.NO_MAP_ID) {
-                Field field = chr.getOrCreateFieldByCurrentInstanceType(returnMap);
-                chr.warp(field);
-            } else if (id == FlagConstants.MAP_NEW_NIGHT) {
+            if (id == FlagConstants.MAP_NEW_NIGHT) {
                 Field field = chr.getOrCreateFieldByCurrentInstanceType(FlagConstants.MAP_NEW_NIGHT_LOBBY);
                 chr.warp(field);
             } else if (id == FlagConstants.MAP_NEW_SUNSET) {
                 Field field = chr.getOrCreateFieldByCurrentInstanceType(FlagConstants.MAP_NEW_SUNSET_LOBBY);
+                chr.warp(field);
+            } else if (returnMap != GameConstants.NO_MAP_ID) {
+                Field field = chr.getOrCreateFieldByCurrentInstanceType(returnMap);
                 chr.warp(field);
             }
         }

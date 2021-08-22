@@ -28,6 +28,10 @@ if field.isChannelField() or chr.lapCount < 3:
 else:
     if field.id == 932200200:
         sm.teleportInField(0, 750)
+    elif field.id == 942001500:
+        sm.teleportToPortal(5)
+    elif field.id == 942002500:
+        sm.teleportToPortal(3)
     else:
         sm.teleportToPortal(3)
         # sm.teleportInField(-2053, 700)
