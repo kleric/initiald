@@ -75,6 +75,8 @@ public class FlagConstants {
     public static final int MAP_NEW_SUNSET_LOBBY = 942001000;
     public static final int MAP_NEW_NIGHT_LOBBY = 942000000;
 
+    public static final long MAP_EVENT_AREA = 820000000;
+
     public static final boolean SPAWN_GHOST = true;
     public static final String CAMERA_NAME = "Camera";
 
