@@ -530,6 +530,22 @@ public class Field {
             DiscordLobbyManager.deleteLobby(voiceLobby);
             voiceLobby = null;
         }
+
+        if (raceNumber != null && race != null) {
+            synchronized (ghosts) {
+                for (Integer id : ghosts.keySet()) {
+                    Ghost g = new Ghost();
+                    g.time = null;
+                    g.id = id;
+                    if (ghosts.get(g.id) == null) return;
+                    g.history = new ArrayList<>(ghosts.get(g.id));
+                    race.ghosts.add(g);
+                }
+                ghosts.clear();
+            }
+            GhostManager.getInstance().saveRace(raceNumber, race);
+            raceGhosts.clear();
+        }
     }
 
     public List<Char> getChars() {
@@ -1737,21 +1753,23 @@ public class Field {
     }
 
     private int flagFinished = 0;
+    private Integer raceNumber = null;
 
     public synchronized int incrementAndGetFinish() {
         flagFinished++;
         if (flagFinished == 1) {
             setTimer(ghostRace ? 5 : 60);
+            raceNumber = GhostManager.getInstance().getAndIncrementRaceCount();
         }
         return flagFinished;
     }
 
     private ArrayList<Integer> finishedRanking = new ArrayList<>();
 
+    private GhostManager.Race race;
+
     public synchronized void addGhost(int place, long time, Char chr) {
         if (chr.getId() == ghostId) return;
-        if (place != 1) return;
-
         Ghost g = new Ghost();
         g.time = time;
         g.id = chr.getId();
@@ -1759,9 +1777,15 @@ public class Field {
         synchronized (ghosts) {
             if (ghosts.get(g.id) == null) return;
             g.history = new ArrayList<>(ghosts.remove(g.id));
-            ghosts.clear();
         }
-        GhostManager.getInstance().updateGhost(id, g);
+        if (race == null) {
+            race = new GhostManager.Race();
+        }
+        race.ghosts.add(g);
+        GhostManager.getInstance().updateRecord(id, chr, time);
+        if (place == 1) {
+            GhostManager.getInstance().updateGhost(id, g);
+        }
     }
 
     public void setTimer(int seconds) {

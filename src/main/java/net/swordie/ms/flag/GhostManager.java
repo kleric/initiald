@@ -3,6 +3,7 @@ package net.swordie.ms.flag;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
+import net.swordie.ms.client.character.Char;
 import net.swordie.ms.constants.FlagConstants;
 import net.swordie.ms.life.movement.Movement;
 import net.swordie.ms.life.movement.MovementInterfaceAdapter;
@@ -26,6 +27,11 @@ public class GhostManager {
     private Ranking newSunsetGhosts;
     private Ranking morningGhosts;
 
+    private String lastRecord;
+    private Races races;
+
+    private static final String RACES = "races.json";
+
     private static final String GHOST_NIGHT = "night.json";
     private static final String GHOST_SUNSET = "sunset.json";
 
@@ -38,6 +44,28 @@ public class GhostManager {
     private static final String GHOSTS_NEW_SUNSET = "new_sunset_ghosts.json";
 
     private Gson gson;
+
+    private final Object raceLock = new Object();
+
+    private static class Races {
+        int lastRace = 0;
+        HashMap<String, Record> nightRecords = new HashMap<>();
+        HashMap<String, Record> newNightRecords = new HashMap<>();
+        HashMap<String, Record> newSunsetRecords = new HashMap<>();
+        HashMap<String, Record> morningRecords = new HashMap<>();
+    }
+
+    private static class Record {
+        long time;
+        int sjumps;
+        int dashes;
+        int fballs;
+        int shields;
+    }
+
+    public static class Race {
+        public List<Ghost> ghosts = new ArrayList<>();
+    }
 
     private static class Ranking {
         List<Ghost> ghostRanking = new ArrayList<>();
@@ -62,6 +90,12 @@ public class GhostManager {
         GsonBuilder builder = new GsonBuilder();
         builder.registerTypeAdapter(Movement.class, new MovementInterfaceAdapter());
         gson = builder.create();
+        try {
+            JsonReader reader = new JsonReader((new FileReader(RACES)));
+            races = gson.fromJson(reader, Races.class);
+        } catch (FileNotFoundException e) {
+            races = new Races();
+        }
         try {
             JsonReader reader = new JsonReader(new FileReader(GHOSTS_NIGHT));
             nightGhosts = gson.fromJson(reader, Ranking.class);
@@ -154,6 +188,37 @@ public class GhostManager {
         return new ArrayList<>();
     }
 
+    private void saveRecords() {
+        String sg = gson.toJson(races);
+        if (!sg.equals(lastRecord)) {
+            try {
+                PrintWriter out = new PrintWriter(RACES);
+                out.write(sg);
+                out.close();
+                lastRecord = sg;
+            } catch (FileNotFoundException e) {
+            }
+        }
+    }
+
+    public int getAndIncrementRaceCount() {
+        synchronized (raceLock) {
+            races.lastRace++;
+            return races.lastRace;
+        }
+    }
+
+    public void saveRace(int raceNumber, Race race) {
+        if (race == null) return;
+        String sg = gson.toJson(race);
+        try {
+            PrintWriter out = new PrintWriter("race/" + raceNumber + ".json");
+            out.write(sg);
+            out.close();
+        } catch (FileNotFoundException e) {
+        }
+    }
+
     private void saveGhosts() {
         sunsetGhosts.topTen();
         String sg = gson.toJson(sunsetGhosts);
@@ -210,6 +275,46 @@ public class GhostManager {
             } catch (FileNotFoundException e) {
             }
         }
+    }
+
+    public void updateRecord(long fieldId, Char chr, long time) {
+        synchronized (raceLock) {
+            HashMap<String, Record> recordMap;
+            if (fieldId == FlagConstants.MAP_NIGHT) {
+                recordMap = races.nightRecords;
+            } else if (fieldId == FlagConstants.MAP_NEW_NIGHT) {
+                recordMap = races.newNightRecords;
+            } else if (fieldId == FlagConstants.MAP_NEW_SUNSET) {
+                recordMap = races.newSunsetRecords;
+            } else if (fieldId == FlagConstants.MAP_DAY) {
+                recordMap = races.morningRecords;
+            } else {
+                return;
+            }
+            Record previousRecord = recordMap.get(chr.getName());
+            Record newRecord = new Record();
+            newRecord.dashes = chr.totalD;
+            newRecord.fballs = chr.totalF;
+            newRecord.sjumps = chr.totalS;
+            newRecord.shields = chr.totalA;
+            newRecord.time = time;
+
+            if (previousRecord == null || isNewRecordBetter(newRecord, previousRecord)) {
+                recordMap.put(chr.getName(), newRecord);
+                saveRecords();
+            }
+        }
+    }
+
+    private boolean isNewRecordBetter(Record newRecord, Record previousRecord) {
+        if (previousRecord.time > newRecord.time) return true;
+        if (previousRecord.time == newRecord.time) {
+            if (newRecord.sjumps < previousRecord.sjumps) return true;
+            if (newRecord.sjumps == previousRecord.sjumps) {
+                return newRecord.dashes < previousRecord.dashes;
+            }
+        }
+        return false;
     }
 
     public void updateGhost(long fieldId, Ghost ghost) {
