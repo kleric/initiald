@@ -2804,11 +2804,13 @@ public class Char {
 			if (skillID == 80001417) { // D Dash
 				if (ddashes > 0) {
 					ddashes--;
+					totalD++;
 				}
 				refreshFlagActionBar();
 			} else if (skillID == 80001416) { // S Jump
 				if (sjumps > 0) {
 					sjumps--;
+					totalS++;
 				}
 				refreshFlagActionBar();
 			} else if (skillID == 80001415) {
@@ -3201,13 +3203,11 @@ public class Char {
 				case 2023296:
 					consume = true;
 					sjumps = 1;
-					totalS++;
 					refreshFlagActionBar();
 					break;
 				case 2023297:
 					consume = true;
 					ddashes++;
-					totalD++;
 					refreshFlagActionBar();
 					break;
 				case 2023298:

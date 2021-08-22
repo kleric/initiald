@@ -1556,6 +1556,7 @@ public class Field {
         }
         if (isRace() && FlagConstants.SPAWN_GHOST) {
             spawnGhost();
+            //spawnGhosts();
         }
         charScores.clear();
         finishedRanking.clear();

@@ -4,13 +4,17 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import net.swordie.ms.client.character.Char;
+import net.swordie.ms.connection.db.DatabaseManager;
 import net.swordie.ms.constants.FlagConstants;
 import net.swordie.ms.life.movement.Movement;
 import net.swordie.ms.life.movement.MovementInterfaceAdapter;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.PrintWriter;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.*;
 
 public class GhostManager {
@@ -50,17 +54,18 @@ public class GhostManager {
     private static class Races {
         int lastRace = 0;
         HashMap<String, Record> nightRecords = new HashMap<>();
+        HashMap<String, Record> sunsetRecords = new HashMap<>();
         HashMap<String, Record> newNightRecords = new HashMap<>();
         HashMap<String, Record> newSunsetRecords = new HashMap<>();
         HashMap<String, Record> morningRecords = new HashMap<>();
     }
 
-    private static class Record {
-        long time;
-        int sjumps;
-        int dashes;
-        int fballs;
-        int shields;
+    public static class Record {
+        public long time;
+        public int sjumps;
+        public int dashes;
+        public int fballs;
+        public int shields;
     }
 
     public static class Race {
@@ -86,6 +91,26 @@ public class GhostManager {
         }
     }
 
+    public HashMap<String, Record> getSunsetRecords() {
+        return races.sunsetRecords;
+    }
+
+    public HashMap<String, Record> getNightRecords() {
+        return races.nightRecords;
+    }
+
+    public HashMap<String, Record> getMorningRecords() {
+        return races.morningRecords;
+    }
+
+    public HashMap<String, Record> getNewNightRecords() {
+        return races.newNightRecords;
+    }
+
+    public HashMap<String, Record> getNewSunsetRecords() {
+        return races.newSunsetRecords;
+    }
+
     private GhostManager() {
         GsonBuilder builder = new GsonBuilder();
         builder.registerTypeAdapter(Movement.class, new MovementInterfaceAdapter());
@@ -95,6 +120,27 @@ public class GhostManager {
             races = gson.fromJson(reader, Races.class);
         } catch (FileNotFoundException e) {
             races = new Races();
+            List<Char> characters = (List<Char>) DatabaseManager.getObjListFromDB(Char.class);
+
+            for (Char chr : characters) {
+                String name = chr.getName();
+                if (chr.bestTime != null) {
+                    Record record = new Record();
+                    record.time = chr.bestTime;
+                    record.sjumps = Integer.MAX_VALUE;
+                    record.dashes = Integer.MAX_VALUE;
+                    races.nightRecords.put(name, record);
+                }
+
+                if (chr.bestTimeSunset != null) {
+                    Record record = new Record();
+                    record.time = chr.bestTimeSunset;
+                    record.sjumps = 0;
+                    record.dashes = 0;
+                    races.sunsetRecords.put(name, record);
+                }
+            }
+            saveRecords();
         }
         try {
             JsonReader reader = new JsonReader(new FileReader(GHOSTS_NIGHT));
@@ -212,7 +258,7 @@ public class GhostManager {
         if (race == null) return;
         String sg = gson.toJson(race);
         try {
-            PrintWriter out = new PrintWriter("race/" + raceNumber + ".json");
+            PrintWriter out = new PrintWriter("races/" + raceNumber + ".json");
             out.write(sg);
             out.close();
         } catch (FileNotFoundException e) {

@@ -7,6 +7,8 @@ import net.swordie.ms.ServerConstants;
 import net.swordie.ms.client.Account;
 import net.swordie.ms.client.character.Char;
 import net.swordie.ms.connection.db.DatabaseManager;
+import net.swordie.ms.flag.GhostManager;
+import net.swordie.ms.loaders.StringData;
 import net.swordie.ms.util.Util;
 import net.swordie.ms.world.Channel;
 import org.kleric.proximity.DiscordConnector;
@@ -84,7 +86,6 @@ public class LoginServer {
                 ctx.result("ok");
                 return;
             }
-            System.out.println("NOpe");
             ctx.result("fail");
         });
         restApp.get("/online", ctx -> {
@@ -95,25 +96,24 @@ public class LoginServer {
                 Collection<Char> onlineChars = c.getChars().values();
                 for (Char cr : onlineChars) {
                     builder.append(Char.makeMapleReadable(cr.getName()));
+                    builder.append(" - ");
+                    builder.append(StringData.getMapStringById(cr.getFieldID()));
                     builder.append("\n");
                 }
             }
            ctx.result(builder.toString());
         });
         restApp.get("/sunset", ctx -> {
-            List<Char> characters = (List<Char>) DatabaseManager.getObjListFromDB(Char.class);
-
-            characters.removeIf(next -> next.bestTimeSunset == null);
-            characters.sort(Comparator.comparingLong(o -> o.bestTimeSunset));
+            List<Rank> ranking = getRanking(GhostManager.getInstance().getSunsetRecords());
 
             StringBuilder sb = new StringBuilder();
             NumberFormat formatter = new DecimalFormat("#0.000");
-            for (int i = 0; i < 20 && i < characters.size(); i++) {
+            for (int i = 0; i < 20 && i < ranking.size(); i++) {
                 sb.append(i + 1);
                 sb.append(". ");
-                Char c = characters.get(i);
-                sb.append(c.getName());
-                long time = c.bestTimeSunset;
+                Rank r = ranking.get(i);
+                sb.append(r.name);
+                long time = r.record.time;
                 sb.append(" | ");
                 sb.append(formatter.format(time / 1000.0));
                 sb.append(" seconds");
@@ -122,26 +122,72 @@ public class LoginServer {
             ctx.result(sb.toString());
         });
         restApp.get("/night", ctx -> {
-            List<Char> characters = (List<Char>) DatabaseManager.getObjListFromDB(Char.class);
-
-            characters.removeIf(next -> next.bestTime == null);
-            characters.sort(Comparator.comparingLong(o -> o.bestTime));
-
-            StringBuilder sb = new StringBuilder();
-            NumberFormat formatter = new DecimalFormat("#0.000");
-            for (int i = 0; i < 20 && i < characters.size(); i++) {
-                sb.append(i + 1);
-                sb.append(". ");
-                Char c = characters.get(i);
-                sb.append(c.getName());
-                long time = c.bestTime;
-                sb.append(" | ");
-                sb.append(formatter.format(time / 1000.0));
-                sb.append(" seconds");
-                sb.append("\r\n");
-            }
-            ctx.result(sb.toString());
+            List<Rank> ranking = getRanking(GhostManager.getInstance().getNightRecords());
+            ctx.result(formatRankingWithPowerups(ranking));
         });
+        restApp.get("/morning", ctx -> {
+            List<Rank> ranking = getRanking(GhostManager.getInstance().getMorningRecords());
+            ctx.result(formatRankingWithPowerups(ranking));
+        });
+        restApp.get("/new_night", ctx -> {
+            List<Rank> ranking = getRanking(GhostManager.getInstance().getNewNightRecords());
+            ctx.result(formatRankingWithPowerups(ranking));
+        });
+        restApp.get("/new_sunset", ctx -> {
+            List<Rank> ranking = getRanking(GhostManager.getInstance().getNewSunsetRecords());
+            ctx.result(formatRankingWithPowerups(ranking));
+        });
+    }
+
+    private String formatRankingWithPowerups(List<Rank> ranking) {
+        StringBuilder sb = new StringBuilder();
+        NumberFormat formatter = new DecimalFormat("#0.000");
+        for (int i = 0; i < 20 && i < ranking.size(); i++) {
+            sb.append(i + 1);
+            sb.append(". ");
+            Rank r = ranking.get(i);
+            sb.append(r.name);
+            long time = r.record.time;
+            sb.append(" | ");
+            sb.append(formatter.format(time / 1000.0));
+            sb.append(" seconds");
+            String powerups = getPowerupString(r.record);
+            if (powerups != null) {
+                sb.append(" | ");
+                sb.append(powerups);
+            }
+            sb.append("\r\n");
+        }
+        return sb.toString();
+    }
+
+    private String getPowerupString(GhostManager.Record record) {
+        String powerup = "";
+        if (record.sjumps == Integer.MAX_VALUE || record.dashes == Integer.MAX_VALUE) {
+            return null;
+        }
+        powerup += record.sjumps;
+        powerup += "S";
+        powerup += record.dashes;
+        powerup += "D";
+        return powerup;
+    }
+
+    private List<Rank> getRanking(HashMap<String, GhostManager.Record> recordMap) {
+        List<Rank> ranking = new ArrayList<>();
+        for (String name : recordMap.keySet()) {
+            Rank rank = new Rank();
+            rank.name = name;
+            rank.record = recordMap.get(name);
+            ranking.add(rank);
+        }
+        ranking.sort(Comparator.comparingLong(r -> r.record.time));
+        return ranking;
+    }
+
+    static class Rank {
+        String name;
+        GhostManager.Record record;
     }
 
     private static class LoginRequest {
