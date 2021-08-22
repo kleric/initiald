@@ -1,11 +1,5 @@
-# Monster Park Shuttle
-
-map = 100000000
-if sm.getFieldID() != 951000000:
-    map = 951000000
-
-
-response = sm.sendAskYesNo("Would you like to go to #m" + str(map) + "#?")
+sm.setSpeakerID(9000232)
+response = sm.sendAskYesNo("Go to the flag area?")
 
 if response:
-    sm.warp(map, 0)
+    sm.warp(820000000)

@@ -1,4 +1,4 @@
-MENU_TEXT = ["Light Path", "Wat"]
+sm.setSpeakerID(9000233)
 answer = sm.sendNext("Which map would you like to race on?\r\n#L0#Night#l\r\n#L1#Sunset#l\r\n#L2#Morning#l\r\n#L3#Nevermind#l")
 
 if answer == 0: # night

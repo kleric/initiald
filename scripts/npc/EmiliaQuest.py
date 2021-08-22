@@ -18,14 +18,16 @@ if sm.getChr().getLevel() > 0:
     47520, 47400, 47390, 47350, 47280, 47270, 47170, 47160, 48100, 47090, 47080, 47050, 47040, 47030, 47020, 47010, 44950, 44940, 44930, 44900, 44830, 44790, 44610, 44510, 44500,
 44490, 44480, 44470, 44430, 44400, 44330, 44310, 44120, 44010, 44000, 41950, 41890, 41860, 41850, 41770, 41750, 41720, 41700, 41640, 41520, 41340, 41160, 39360, 39350, 39340,
 39190]
-        hairColor = al.getHair() % 10
+        hairColor = int(al.getHair() % 10)
         if al.getGender() == 0: # Male
             for x in range(100):
                 options.append(30000 + 10 * x)
         else: # Female
             for x in range(100):
                 options.append(31000 + 10 * x)
-        options = map(lambda x: x + hairColor, options)
+        test = map(lambda x: x + hairColor, options)
+        options = test
+        #options = map(lambda y: hairColor + y, options)
 
     elif selection == 1: #face
         options = [26003, 26096, 24079]
