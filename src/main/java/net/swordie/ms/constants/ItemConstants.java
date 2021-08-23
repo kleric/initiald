@@ -1567,6 +1567,7 @@ public class ItemConstants {
             case 2023296:
             case 2023297:
             case 2023298:
+            //case FlagConstants.STAR:
                 return true;
 
             default:

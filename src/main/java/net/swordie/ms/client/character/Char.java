@@ -2799,6 +2799,11 @@ public class Char {
 	@Transient
 	public int fballs;
 
+	@Transient
+	public long sjumpUseTime;
+	@Transient
+	public long ddashUseTime;
+
 	public void updateFlagSkill(int skillID) {
 		if (!field.isChannelField()) {
 			if (skillID == 80001417) { // D Dash
@@ -2806,12 +2811,16 @@ public class Char {
 					ddashes--;
 					totalD++;
 				}
+				ddashUseTime = System.currentTimeMillis();
+				flagSkillResetTimer();
 				refreshFlagActionBar();
 			} else if (skillID == 80001416) { // S Jump
 				if (sjumps > 0) {
 					sjumps--;
 					totalS++;
 				}
+				sjumpUseTime = System.currentTimeMillis();
+				flagSkillResetTimer();
 				refreshFlagActionBar();
 			} else if (skillID == 80001415) {
 				if (shields > 0) {
@@ -2845,10 +2854,17 @@ public class Char {
 		if (field.isChannelField()) {
 			write(ActionBarPacket.enableAll(22));
 		} else {
-			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HIGH_JUMP, sjumps , 1));
-			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.SLIPSTREAM, ddashes , 10));
-			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.CANNON, fballs , 10));
-			write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HEAVY_STANDER, shields , 1));
+			if (field.isNewRace()) {
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HIGH_JUMP, sjumps, 1));
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.SLIPSTREAM, ddashes, 10));
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.CANNON, 0, 10));
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HEAVY_STANDER, 0, 1));
+			} else {
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HIGH_JUMP, sjumps, 1));
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.SLIPSTREAM, ddashes, 10));
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.CANNON, fballs, 10));
+				write(ActionBarPacket.updateActionBar(22, ActionBarPacket.HEAVY_STANDER, shields, 1));
+			}
 		}
 	}
 
@@ -3215,6 +3231,11 @@ public class Char {
 					fballs++;
 					totalF++;
 					refreshFlagActionBar();
+					break;
+				case FlagConstants.STAR: // star
+					sjumpUseTime -= 20_000;
+					ddashUseTime -= 20_000;
+					flagSkillResetTimer();
 					break;
 				default:
 					chatMessage(ChatType.Mob, String.format("Unhandled stat change item %d", itemID));
@@ -4248,6 +4269,35 @@ public class Char {
 			comboKillResetTimer.cancel(true);
 		}
 		comboKillResetTimer = EventManager.addEvent(() -> setComboCounter(0), GameConstants.COMBO_KILL_RESET_TIMER, TimeUnit.SECONDS);
+	}
+
+	@Transient
+	private ScheduledFuture flagSkillFuture;
+
+	public void flagSkillResetTimer() {
+		if (!field.isNewRace()) return;
+		if (flagSkillFuture != null && !flagSkillFuture.isDone()) {
+			flagSkillFuture.cancel(true);
+		}
+		if (ddashes > 0 && sjumps > 0) return;
+		long time = System.currentTimeMillis();
+		long delay = FlagConstants.SKILL_CD;
+		if (sjumps <= 0) {
+			delay = Math.min(delay, FlagConstants.SKILL_CD - (time - sjumpUseTime));
+		}
+		if (ddashes <= 0) {
+			delay = Math.min(delay, FlagConstants.SKILL_CD - (time - ddashUseTime));
+		}
+		flagSkillFuture = EventManager.addEvent(() -> {
+			long t = System.currentTimeMillis();
+			boolean hasS = (t - sjumpUseTime) > FlagConstants.SKILL_CD;
+			boolean hasD = (t - ddashUseTime) > FlagConstants.SKILL_CD;
+			sjumps = hasS ? 1 : 0;
+			ddashes = hasD ? 1 : 0;
+			refreshFlagActionBar();
+			if (hasS && hasD) return;
+			flagSkillResetTimer();
+		}, Math.max(0, delay), TimeUnit.MILLISECONDS);
 	}
 
 	public Map<Integer, Long> getSkillCoolTimes() {

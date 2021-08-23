@@ -755,6 +755,15 @@ public class Field {
         return FlagConstants.isRaceLobby(id);
     }
 
+    public boolean isNewRace() {
+        switch (id) {
+            case FlagConstants.MAP_NEW_NIGHT:
+            case FlagConstants.MAP_NEW_SUNSET:
+                return !isChannelField;
+        }
+        return false;
+    }
+
     public boolean isRace() {
         switch (id) {
             case FlagConstants.MAP_SUNSET:
@@ -1799,8 +1808,32 @@ public class Field {
 
     public synchronized void startSpawningItems() {
         if (!spawningItems) {
-            scriptManagerImpl.addEvent(EventManager.addFixedRateEvent(this::spawnItems, FlagConstants.POWERUP_START_TIME, FlagConstants.POWERUP_SPAWN_TIME));
+            if (isNewRace()) {
+                scriptManagerImpl.addEvent(EventManager.addFixedRateEvent(this::spawnStars, 1000, FlagConstants.POWERUP_SPAWN_TIME));
+            } else {
+                scriptManagerImpl.addEvent(EventManager.addFixedRateEvent(this::spawnItems, FlagConstants.POWERUP_START_TIME, FlagConstants.POWERUP_SPAWN_TIME));
+            }
             spawningItems = true;
+        }
+    }
+
+    private void spawnStars() {
+        if (!isNewRace()) {
+            return;
+        }
+        if (id == FlagConstants.MAP_NEW_NIGHT) {
+            spawnStar(FlagConstants.N_STAR_1);
+            spawnStar(FlagConstants.N_STAR_2);
+            spawnStar(FlagConstants.N_STAR_3);
+            spawnStar(FlagConstants.N_STAR_4);
+            spawnStar(FlagConstants.N_STAR_5);
+            spawnStar(FlagConstants.N_STAR_6);
+        } else if (id == FlagConstants.MAP_NEW_SUNSET) {
+            spawnStar(FlagConstants.S_STAR_1);
+            spawnStar(FlagConstants.S_STAR_2);
+            spawnStar(FlagConstants.S_STAR_3);
+            spawnStar(FlagConstants.S_STAR_4);
+            spawnStar(FlagConstants.S_STAR_5);
         }
     }
 
@@ -1868,6 +1901,12 @@ public class Field {
         Item item = ItemData.getItemDeepCopy(id);
         Drop drop = new Drop(-1, item);
         drop(drop, new Position(x, y));
+    }
+
+    private void spawnStar(Position position) {
+        Item item = ItemData.getItemDeepCopy(FlagConstants.STAR);
+        Drop drop = new Drop(-1, item);
+        drop(drop, position, position,true);
     }
 
 

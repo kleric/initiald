@@ -1,5 +1,9 @@
 package net.swordie.ms.constants;
 
+import net.swordie.ms.util.Position;
+
+import java.awt.*;
+
 public class FlagConstants {
 
     // Tree
@@ -50,6 +54,8 @@ public class FlagConstants {
     public static final int NIGHT_SPAWN_12_X = -2000;
     public static final int NIGHT_SPAWN_12_Y = 1778;
 
+    public static final int STAR = 2023669;
+
     public static final int[] POWERUPS = {2023295, 2023296, 2023297, 2023298};
     //public static final int[] POWERUPS = { 2023296, 2023297};
 
@@ -60,6 +66,8 @@ public class FlagConstants {
     public static final int SKILL_F = 80001418;
     public static final int SKILL_G = 80001425;
     public static final int SKILL_H = 80001426;
+
+    public static final int SKILL_CD = 40_000;
 
     public static final int MAP_SUNSET_EXIT = 932200004;
 
@@ -80,6 +88,18 @@ public class FlagConstants {
     public static final boolean SPAWN_GHOST = true;
     public static final String CAMERA_NAME = "Camera";
 
+    public static final Position N_STAR_1 = new Position(-105, 2678);
+    public static final Position N_STAR_2 = new Position(-1075, 2332);
+    public static final Position N_STAR_3 = new Position(-2060, 1364);
+    public static final Position N_STAR_4 = new Position(-2063, 1092);
+    public static final Position N_STAR_5 = new Position(807, 1358);
+    public static final Position N_STAR_6 = new Position(2064, 1298);
+
+    public static final Position S_STAR_1 = new Position(-785, 1480);
+    public static final Position S_STAR_2 = new Position(275, 1538);
+    public static final Position S_STAR_3 = new Position(2013, 1128);
+    public static final Position S_STAR_4 = new Position(1352, 1122);
+    public static final Position S_STAR_5 = new Position(724, 1001);
 
     public static boolean isRaceLobby(int mapId) {
         switch (mapId) {

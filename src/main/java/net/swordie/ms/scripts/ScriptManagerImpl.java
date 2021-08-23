@@ -2457,6 +2457,8 @@ public class ScriptManagerImpl implements ScriptManager {
 	public void startNewRace() {
 		chr.resetFlagSkills();
 		if (!chr.getField().isChannelField()) {
+			chr.sjumps = 1;
+			chr.ddashes = 1;
 			chr.getField().startNewRace();
 		}
 	}
@@ -3228,7 +3230,7 @@ public class ScriptManagerImpl implements ScriptManager {
 	public void sendLuminousChangedJob() {
 		chr.write(UserLocal.incLarknessReponse(-1, LarknessSkillType.NON_LARKNESS_SKILL));
 	}
-	
+
 	public int getPatternInputCount() {
 		return patternInputCount;
 	}

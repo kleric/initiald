@@ -726,8 +726,8 @@ public abstract class Job {
 		characterStat.setLuk(4);
 		characterStat.setHp(20000);
 		characterStat.setMaxHp(20000);
-		characterStat.setMp(5);
-		characterStat.setMaxMp(5);
+		characterStat.setMp(20000);
+		characterStat.setMaxMp(20000);
 
 		characterStat.setPosMap(FlagConstants.MAP_EVENT_AREA);// should be handled for eah job not here
 

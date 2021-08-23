@@ -10,8 +10,6 @@ public class ActionBarPacket {
     public static int SLIPSTREAM = 2023297;
     public static int CANNON = 2023298;
 
-
-
     public static OutPacket removeActionBar(int id) {
         OutPacket out = new OutPacket(OutHeader.ACTION_BAR_RESULT);
         out.encodeInt(6);
