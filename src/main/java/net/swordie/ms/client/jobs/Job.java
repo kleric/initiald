@@ -719,7 +719,7 @@ public abstract class Job {
 
 	public void setCharCreationStats(Char chr) {
 		CharacterStat characterStat = chr.getAvatarData().getCharacterStat();
-		characterStat.setLevel(200);
+		characterStat.setLevel(5);
 		characterStat.setStr(12);
 		characterStat.setDex(5);
 		characterStat.setInt(4);

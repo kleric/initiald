@@ -17,14 +17,8 @@ if field.isChannelField() or chr.lapCount < 3:
         sm.teleportInField(-2203, 2558)
     elif field.id == 942001500:
         sm.teleportToPortal(1)
-        chr.sjumps = 1
-        chr.ddashes = 1
-        sm.refreshFlagActionBar()
     elif field.id == 942002500:
         sm.teleportToPortal(5)
-        chr.sjumps = 1
-        chr.ddashes = 1
-        sm.refreshFlagActionBar()
 else:
     if field.id == 932200200:
         sm.teleportInField(0, 750)
