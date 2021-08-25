@@ -2457,8 +2457,10 @@ public class ScriptManagerImpl implements ScriptManager {
 	public void startNewRace() {
 		chr.resetFlagSkills();
 		if (!chr.getField().isChannelField()) {
-			chr.sjumps = 1;
-			chr.ddashes = 1;
+			if (chr.getField().isNewRace()) {
+				chr.sjumps = 1;
+				chr.ddashes = 1;
+			}
 			chr.getField().startNewRace();
 		}
 	}

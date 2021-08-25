@@ -50,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static net.swordie.ms.client.character.skills.SkillStat.t;
 import static net.swordie.ms.client.character.skills.SkillStat.time;
 
 /**
@@ -70,6 +71,7 @@ public class Field {
     private Set<Foothold> footholds;
     private Map<Integer, Life> lifes;
     private List<Char> chars;
+    private List<Char> ghostChars;
     private Map<Life, Char> lifeToControllers;
     private Map<Life, ScheduledFuture> lifeSchedules;
     private String onFirstUserEnter = "", onUserEnter = "";
@@ -107,6 +109,7 @@ public class Field {
         this.footholds = new HashSet<>();
         this.lifes = new ConcurrentHashMap<>();
         this.chars = new CopyOnWriteArrayList<>();
+        this.ghostChars = new CopyOnWriteArrayList<>();
         this.lifeToControllers = new HashMap<>();
         this.lifeSchedules = new HashMap<>();
         this.directionInfo = new HashMap<>();
@@ -524,13 +527,16 @@ public class Field {
             }
         }
         chrs.clear();
+        ghostChars.clear();
         scriptManagerImpl.stopEvents();
 
         if (voiceLobby != null) {
             DiscordLobbyManager.deleteLobby(voiceLobby);
             voiceLobby = null;
         }
-
+        if (updateGhostFuture != null) {
+            updateGhostFuture.cancel(true);
+        }
         if (raceNumber != null && race != null) {
             synchronized (ghosts) {
                 for (Integer id : ghosts.keySet()) {
@@ -554,6 +560,23 @@ public class Field {
 
     public Char getCharByID(int id) {
         return getChars().stream().filter(c -> c.getId() == id).findFirst().orElse(null);
+    }
+
+    public void addGhostChar(Char chr) {
+        if (!getChars().contains(chr)) {
+            getChars().add(chr);
+        }
+        if (!ghostChars.contains(chr)) {
+            ghostChars.add(chr);
+        }
+        if (!FlagConstants.CAMERA_NAME.equalsIgnoreCase(chr.getName())) {
+            broadcastPacket(UserPool.userEnterField(chr), chr);
+        }
+        for (Char c : getChars()) {
+            if (c.isCamera()) {
+                c.refreshCameraField();
+            }
+        }
     }
 
     public void addChar(Char chr) {
@@ -603,7 +626,7 @@ public class Field {
         );
     }
 
-    private HashMap<Integer, Integer> charScores = new HashMap<>();
+    public HashMap<Integer, Integer> charScores = new HashMap<>();
 
     // start -2204
     // goal -2665
@@ -615,6 +638,8 @@ public class Field {
         broadcastPacket(CField.updateRanking(charScores, finishedRanking));
     }
 
+    private int bestScore;
+
     private void updateScore(Char chr) {
         if (!charScores.containsKey(chr.getId())) {
             return;
@@ -622,6 +647,7 @@ public class Field {
         Position pos = chr.getPosition();
         if (chr.lapCount >= 3) {
             if (charScores.get(chr.getId()) != 730) {
+                bestScore = Math.max(730, bestScore);
                 charScores.put(chr.getId(), 730);
                 sendUpdatedScores();
             }
@@ -673,7 +699,15 @@ public class Field {
 
         if (charScores.get(chr.getId()) != score) {
             charScores.put(chr.getId(), score);
+            bestScore = Math.max(score, bestScore);
             sendUpdatedScores();
+        }
+        if (!chr.pity) {
+            if (bestScore - score >= 200) {
+                chr.pity = true;
+                FieldAttackObj fao = new FieldAttackObj(3, 0, chr.getPosition().deepCopy(), false);
+                spawnLife(fao, chr);
+            }
         }
     }
 
@@ -782,6 +816,7 @@ public class Field {
 
     public void removeChar(Char chr) {
         getChars().remove(chr);
+        ghostChars.remove(chr);
         if (!FlagConstants.CAMERA_NAME.equalsIgnoreCase(chr.getName())) {
             broadcastPacket(UserPool.userLeaveField(chr), chr);
             for (Char c : getChars()) {
@@ -811,12 +846,13 @@ public class Field {
         for (int id : removedList) {
             removeLife(id, false);
         }
-        if (getChars().isEmpty()) {
+        if (getChars().size() == ghostChars.size()) {
             if (voiceLobby != null) {
                 String voice = voiceLobby;
                 voiceLobby = null;
                 DiscordLobbyManager.deleteLobby(voice);
             }
+            clear();
         }
     }
 
@@ -1557,6 +1593,7 @@ public class Field {
         }
         flagFinished = 0;
         startTime = System.currentTimeMillis();
+        bestScore = 0;
         startSpawningItems();
         setTimer(8 * 60);
         ghostRace = isSoloRace();
@@ -1633,7 +1670,7 @@ public class Field {
                 ghostChar.getAvatarData().setAvatarLook(real.getAvatarData().getAvatarLook());
             }
             raceGhosts.put(g.id, ghostChar);
-            addChar(ghostChar);
+            addGhostChar(ghostChar);
         }
 
         startGhosts();
@@ -1679,7 +1716,7 @@ public class Field {
                 ghost.getAvatarData().setAvatarLook(real.getAvatarData().getAvatarLook());
             }
             ghostId = ghost.getId();
-            addChar(ghost);
+            addGhostChar(ghost);
             startGhost();
         }
     }
@@ -1768,7 +1805,8 @@ public class Field {
     public synchronized int incrementAndGetFinish() {
         flagFinished++;
         if (flagFinished == 1) {
-            setTimer(ghostRace ? 5 : 60);
+            boolean solo = (getChars().size() - ghostChars.size()) == 1;
+            setTimer(solo ? 5 : 60);
             raceNumber = GhostManager.getInstance().getAndIncrementRaceCount();
         }
         return flagFinished;

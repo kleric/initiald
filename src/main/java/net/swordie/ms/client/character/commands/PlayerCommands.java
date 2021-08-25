@@ -1,62 +1,18 @@
 package net.swordie.ms.client.character.commands;
 
-import net.swordie.ms.Server;
-import net.swordie.ms.client.Account;
-import net.swordie.ms.client.character.BroadcastMsg;
 import net.swordie.ms.client.character.Char;
 import net.swordie.ms.client.character.avatar.AvatarLook;
 import net.swordie.ms.client.character.items.Equip;
 import net.swordie.ms.client.character.items.Item;
-import net.swordie.ms.client.character.quest.Quest;
-import net.swordie.ms.client.character.skills.Option;
-import net.swordie.ms.client.character.skills.Skill;
-import net.swordie.ms.client.character.skills.StolenSkill;
-import net.swordie.ms.client.character.skills.info.ForceAtomInfo;
-import net.swordie.ms.client.character.skills.info.SkillInfo;
-import net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat;
-import net.swordie.ms.client.character.skills.temp.TemporaryStatBase;
-import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
-import net.swordie.ms.client.jobs.adventurer.Archer;
-import net.swordie.ms.client.jobs.adventurer.Magician;
-import net.swordie.ms.client.jobs.adventurer.Thief;
-import net.swordie.ms.client.jobs.nova.Kaiser;
-import net.swordie.ms.connection.OutPacket;
-import net.swordie.ms.connection.db.DatabaseManager;
 import net.swordie.ms.connection.packet.*;
-import net.swordie.ms.constants.ItemConstants;
-import net.swordie.ms.constants.JobConstants.JobEnum;
 import net.swordie.ms.enums.*;
-import net.swordie.ms.handlers.header.OutHeader;
-import net.swordie.ms.life.Life;
-import net.swordie.ms.life.mob.Mob;
-import net.swordie.ms.life.mob.MobStat;
-import net.swordie.ms.life.mob.MobTemporaryStat;
-import net.swordie.ms.life.npc.Npc;
 import net.swordie.ms.loaders.*;
-import net.swordie.ms.loaders.containerclasses.SkillStringInfo;
-import net.swordie.ms.util.FileTime;
-import net.swordie.ms.util.Position;
-import net.swordie.ms.util.Rect;
 import net.swordie.ms.util.Util;
-import net.swordie.ms.util.container.Tuple;
-import net.swordie.ms.util.tools.StringUtil;
-import net.swordie.ms.world.World;
 import net.swordie.ms.world.field.Field;
-import net.swordie.ms.world.field.FieldInstanceType;
-import net.swordie.ms.world.field.Portal;
-import net.swordie.ms.world.field.fieldeffect.FieldEffect;
 import org.apache.log4j.LogManager;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
-import org.hibernate.query.Query;
 
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.time.LocalDateTime;
 import java.util.*;
 
-import static net.swordie.ms.client.character.skills.SkillStat.*;
-import static net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat.*;
 import static net.swordie.ms.enums.ChatType.*;
 import static net.swordie.ms.enums.InventoryOperation.ADD;
 import static net.swordie.ms.enums.PrivateStatusIDFlag.*;
@@ -195,7 +151,7 @@ public class PlayerCommands {
     @Command(names = {"save"}, requiredType = NONE)
     public static class SaveLocation extends PlayerCommand {
         public static void execute(Char chr, String[] args) {
-            chr.setOldPosition(chr.getPosition());
+            chr.setSavePosition(chr.getPosition());
         }
     }
 
@@ -203,7 +159,7 @@ public class PlayerCommands {
     public static class LoadLocation extends PlayerCommand {
         public static void execute(Char chr, String[] args) {
             if (!chr.getField().isRace()) {
-                chr.write(CField.teleport(chr.getOldPosition(), chr));
+                chr.write(CField.teleport(chr.getSavePosition(), chr));
             }
         }
     }

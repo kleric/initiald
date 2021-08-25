@@ -259,6 +259,12 @@ public class Char {
 	@Transient
 	private Position oldPosition;
 	@Transient
+	private Position savePosition;
+	@Transient
+	private long oldPositionTime;
+	@Transient
+	private long oldPositionTimeDt;
+	@Transient
 	private Field field;
 	@Transient
 	private byte moveAction;
@@ -440,6 +446,8 @@ public class Char {
 	private List<NpcShopItem> buyBack = new ArrayList<>();
     @Transient
 	public int lapCount;
+    @Transient
+	public boolean pity;
 
 	public Char() {
 		this(0, "", 0, 0, 0, (short) 0, (byte) -1, (byte) -1, 0, 0, new int[]{});
@@ -1829,7 +1837,13 @@ public class Char {
 	}
 
 	public void setPosition(Position position) {
+		this.oldPosition = this.position;
 		this.position = position;
+		long t = System.currentTimeMillis();
+		if (oldPositionTime != 0) {
+			oldPositionTimeDt = t - oldPositionTime;
+		}
+		oldPositionTime = t;
 	}
 
 	public void setField(Field field) {
@@ -2345,12 +2359,19 @@ public class Char {
 		addMoney(-amount);
 	}
 
+	public long getOldPosTime() {
+		return oldPositionTimeDt;
+	}
 	public Position getOldPosition() {
 		return oldPosition;
 	}
 
-	public void setOldPosition(Position oldPosition) {
-		this.oldPosition = oldPosition;
+	public Position getSavePosition() {
+		return savePosition;
+	}
+
+	public void setSavePosition(Position oldPosition) {
+		this.savePosition = oldPosition;
 	}
 
 	public void setMoveAction(byte moveAction) {
@@ -2847,6 +2868,9 @@ public class Char {
 		totalD = 0;
 		totalS = 0;
 		totalF = 0;
+		sjumpUseTime = 0;
+		ddashUseTime = 0;
+		pity = false;
 	}
 
 

@@ -22,6 +22,8 @@ import net.swordie.ms.client.character.skills.*;
 import net.swordie.ms.client.character.skills.info.AttackInfo;
 import net.swordie.ms.client.character.skills.info.ForceAtomInfo;
 import net.swordie.ms.client.character.skills.info.MobAttackInfo;
+import net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat;
+import net.swordie.ms.client.character.skills.temp.TemporaryStatBase;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
 import net.swordie.ms.client.friend.Friend;
 import net.swordie.ms.client.friend.FriendFlag;
@@ -1407,6 +1409,110 @@ public class WorldHandler {
         }
     }
 
+    public static void handleAttackObjPushAct(Char chr, InPacket inPacket) {
+        int objectId = inPacket.decodeInt();
+        FieldAttackObj cannon = null;
+        for (FieldAttackObj obj : chr.getField().getFieldAttackObjects()) {
+            if (obj.getObjectId() == objectId) {
+                cannon = obj;
+                break;
+            }
+        }
+        if (cannon == null) return;
+        cannon.shots--;
+        OutPacket hitP = new OutPacket(OutHeader.B2_BODY_RESULT);
+        hitP.encodeShort(4); // 4
+        hitP.encodeInt(chr.getId()); // Character ID
+        hitP.encodeInt(chr.getFieldID()); // Map Id
+        hitP.encodeShort(1); // number of b2 bodies
+
+        hitP.encodeByte(1); //ignored looks like
+        int xOffset = cannon.isFlip() ? 120 : -120;
+        int yOffset = -60;
+        int cannonX = cannon.getX() + xOffset;
+        int cannonY = cannon.getY() + yOffset;
+        hitP.encodeShort(cannonX);
+        hitP.encodeShort(cannonY);
+        hitP.encodeInt(3000); // time lifespan of object
+        hitP.encodeShort(10);
+        hitP.encodeShort(10);
+        hitP.encodeShort(10);
+        hitP.encodeByte(0); // seems to check collision
+            /*if (s3 >= -1) {
+                hitP.encodeString("");
+            }*/
+        hitP.encodeInt(0);
+        hitP.encodeInt(95001004); // skill ID
+        hitP.encodeByte(0);
+        hitP.encodeInt(0);
+        hitP.encodeInt(95001004);
+        hitP.encodeByte(0);
+
+        boolean isLeft = cannon.isFlip();
+        if (chr.getField().isRace()) {
+            HashMap<Integer, Integer> scores = chr.getField().charScores;
+            Integer highest = null;
+            Integer max = 0;
+            for (Integer id : scores.keySet()) {
+                if (id == chr.getId()) continue;
+                int s = scores.get(id);
+                if (s > max) {
+                    highest = id;
+                    max = s;
+                }
+            }
+            if (highest != null) {
+                Char furthest = chr.getField().getCharByID(highest);
+                Position pos = furthest.getPosition();
+                Position prevPos = furthest.getOldPosition();
+                int cxv = 0;//(int) (Math.random() * 50) - 25;
+                int cyv = 0;//(int) (Math.random() * 50) - 25;;
+                if (prevPos != null) {
+                    long dT = chr.getOldPosTime();
+                    cxv += (double) (pos.getX() - prevPos.getX()) * ((double) dT / 1000.0);
+                    cyv += (double) (pos.getY() - prevPos.getY()) * ((double) dT / 1000.0);
+                }
+                Position target = new Position(pos.getX() + cxv, (pos.getY() + cyv) - 60);
+                hitP.encodeInt((target.getX() - cannonX)/2); // x vel
+                hitP.encodeInt((cannonY - target.getY())/2); // y vel
+                chr.getField().broadcastPacket(hitP);
+            } else {
+                hitP.encodeInt(isLeft ? cannon.xPower : -cannon.xPower); // x vel
+                hitP.encodeInt(cannon.yPower); // y vel
+                chr.getField().broadcastPacket(hitP);
+            }
+        } else {
+            hitP.encodeInt(isLeft ? cannon.xPower : -cannon.xPower); // x vel
+            hitP.encodeInt(cannon.yPower); // y vel
+            chr.getField().broadcastPacket(hitP);
+        }
+        if (cannon.shots <= 0) {
+            chr.getField().removeLife(cannon);
+            return;
+        }
+    }
+
+    public static void handleUserFAOGetOff(Char chr, InPacket inPacket) {
+        int objectId = inPacket.decodeInt();
+        int x = inPacket.decodeInt();
+        int y = inPacket.decodeInt();
+        FieldAttackObj obj = (FieldAttackObj) chr.getField().getLifeByObjectID(objectId);
+        if (obj.getOwnerID() == 0) {
+            obj.setOwnerID(chr.getId());
+            chr.write(FieldAttackObjPool.resultBoard(objectId, true, chr.getId(), chr.getId()));
+            //chr.getField().broadcastPacket(FieldAttackObjPool.objInfo(obj));
+            /*int skill = 95001002;
+            Option o = new Option(skill, (byte) 1);
+            o.nOption = 1;
+            o.rOption = skill;
+            chr.getTemporaryStatManager().putCharacterStatValue(AimBox2D, o);
+            chr.getTemporaryStatManager().sendSetStatPacket();*/
+        } else {
+            chr.write(FieldAttackObjPool.resultBoard(objectId, false, chr.getId(), obj.getOwnerID()));
+        }
+        //chr.getField().broadcastPacket(FieldAttackObjPool.onPushAct(objectId, 5, true));
+    }
+
     public static void handleRequestArrowPlatterObj(Char chr, InPacket inPacket) {
         boolean flip = inPacket.decodeByte() != 0;
         Position position = inPacket.decodePositionInt(); // ignoring this, we just take the char's info we know
@@ -2710,6 +2816,13 @@ public class WorldHandler {
                 }
             } else if (emotion == 6) {
                 PlayerCommands.LoadLocation.execute(c.getChr(), new String[] {"load"});
+            } else if (emotion == 5) {
+                for (FieldAttackObj obj : chr.getField().getFieldAttackObjects()) {
+                    if (obj.getOwnerID() == chr.getId()) {
+                        chr.write(FieldAttackObjPool.setAttack(obj.getObjectId(), 0));
+                        break;
+                    }
+                }
             }
         }
     }

@@ -29,6 +29,7 @@ import net.swordie.ms.constants.ItemConstants;
 import net.swordie.ms.constants.JobConstants.JobEnum;
 import net.swordie.ms.enums.*;
 import net.swordie.ms.handlers.header.OutHeader;
+import net.swordie.ms.life.FieldAttackObj;
 import net.swordie.ms.life.Life;
 import net.swordie.ms.life.mob.Mob;
 import net.swordie.ms.life.mob.MobStat;
@@ -913,6 +914,78 @@ public class AdminCommands {
             builder.setLength(builder.length() - 2);
             chr.chatMessage(Notice2, builder.toString());
 
+        }
+    }
+
+    @Command(names = {"cannon"}, requiredType = ADMIN)
+    public static class cannon extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            int x = Integer.parseInt(args[1]);
+            int y = Integer.parseInt(args[2]);
+            boolean flip = false;
+            if (x < 0) {
+                flip = true;
+                x *= -1;
+            }
+            FieldAttackObj fao = new FieldAttackObj(3, 0, chr.getPosition().deepCopy(), flip);
+            fao.xPower = x;
+            fao.yPower = y;
+            Field field = chr.getField();
+            field.spawnLife(fao, chr);
+            field.broadcastPacket(FieldAttackObjPool.objCreate(fao), chr);
+        }
+    }
+
+    @Command(names = {"getoff"}, requiredType = ADMIN)
+    public static class getoff extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            for (FieldAttackObj obj : chr.getField().getFieldAttackObjects()) {
+                if (obj.getOwnerID() == chr.getId()) {
+                    obj.setOwnerID(0);
+                    chr.write(FieldAttackObjPool.resultGetOff(obj.getObjectId(), true));
+                    //chr.getField().broadcastPacket(FieldAttackObjPool.objInfo(obj));
+                    return;
+                }
+            }
+        }
+    }
+
+    @Command(names = {"clcan"}, requiredType = ADMIN)
+    public static class clcan extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            List<FieldAttackObj> objs = new ArrayList<>(chr.getField().getFieldAttackObjects());
+            for (FieldAttackObj obj : objs) {
+                chr.getField().removeLife(obj);
+            }
+        }
+    }
+
+
+    @Command(names = {"a"}, requiredType = ADMIN)
+    public static class a extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            int num = Integer.parseInt(args[1]);
+            if (num >= 0) {
+                for (FieldAttackObj obj : chr.getField().getFieldAttackObjects()) {
+                    chr.write(FieldAttackObjPool.setAttack(obj.getObjectId(), num));
+                    return;
+                }
+
+            }
+        }
+    }
+
+    @Command(names = {"b"}, requiredType = ADMIN)
+    public static class b extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            int num = Integer.parseInt(args[1]);
+            if (num >= 0) {
+                for (FieldAttackObj obj : chr.getField().getFieldAttackObjects()) {
+                    chr.write(FieldAttackObjPool.onPushAct(obj.getObjectId(), num, false));
+                    return;
+                }
+
+            }
         }
     }
 
