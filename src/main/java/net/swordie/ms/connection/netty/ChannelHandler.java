@@ -463,6 +463,9 @@ public class ChannelHandler extends SimpleChannelInboundHandler<InPacket> {
                 WorldHandler.handleRequestArrowPlatterObj(chr, inPacket);
                 break;
             case USER_FIELD_ATTACK_OBJ_REQUEST_GET_OFF:
+                WorldHandler.handleUserFAOBoard(chr, inPacket);
+                break;
+            case MONSTER_BATTLE:
                 WorldHandler.handleUserFAOGetOff(chr, inPacket);
                 break;
             case FIELD_ATTACK_OBJ_PUSH_ACT:
