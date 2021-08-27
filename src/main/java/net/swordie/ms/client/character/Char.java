@@ -2870,7 +2870,7 @@ public class Char {
 		totalF = 0;
 		sjumpUseTime = 0;
 		ddashUseTime = 0;
-		pity = false;
+		pity = true;
 	}
 
 
