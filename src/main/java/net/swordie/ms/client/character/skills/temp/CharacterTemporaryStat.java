@@ -439,12 +439,12 @@ public enum CharacterTemporaryStat implements Comparator<CharacterTemporaryStat>
 
     TimeFastABuff(369),// v202.3
     TimeFastBBuff(370),// v202.3
-    GatherDropR(371),// v202.3
-    AimBox2D(372),// v202.3
-    IncMonsterBattleCaptureRate(373),// v202.3
-    CursorSniping(374),// v202.3
-    DebuffTolerance(375),// v202.3
-    Unk376(376),// v202.3
+    Unk376(371),// v202.3
+    GatherDropR(372),// v202.3
+    AimBox2D(373),// v202.3
+    IncMonsterBattleCaptureRate(374),// v202.3
+    CursorSniping(375),// v202.3
+    DebuffTolerance(376),// v202.3
     DotHealHPPerSecond(377),// v202.3
 
     SpiritGuard(378),// v202.3
