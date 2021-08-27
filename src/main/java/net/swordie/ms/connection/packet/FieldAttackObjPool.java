@@ -29,7 +29,7 @@ public class FieldAttackObjPool {
         OutPacket outPacket = new OutPacket(OutHeader.FIELD_ATTACK_INFO);
 
         outPacket.encode(fieldAttackObj);
-        outPacket.encodeInt(fieldAttackObj.getOwnerID());
+        outPacket.encodeInt(-1);
         return outPacket;
     }
 

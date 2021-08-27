@@ -5,6 +5,7 @@ import net.swordie.ms.client.Client;
 import net.swordie.ms.client.character.Char;
 import net.swordie.ms.client.character.items.Item;
 import net.swordie.ms.client.character.runestones.RuneStone;
+import net.swordie.ms.client.character.skills.SkillStat;
 import net.swordie.ms.client.character.skills.TownPortal;
 import net.swordie.ms.client.character.skills.info.SkillInfo;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
@@ -1850,9 +1851,26 @@ public class Field {
                 scriptManagerImpl.addEvent(EventManager.addFixedRateEvent(this::spawnStars, 1000, FlagConstants.POWERUP_SPAWN_TIME));
             } else {
                 scriptManagerImpl.addEvent(EventManager.addFixedRateEvent(this::spawnItems, FlagConstants.POWERUP_START_TIME, FlagConstants.POWERUP_SPAWN_TIME));
+                scriptManagerImpl.addEvent(EventManager.addFixedRateEvent(this::spawnCannons, FlagConstants.CANNON_START_TIME, FlagConstants.CANNON_SPAWN_CYCLE));
             }
             spawningItems = true;
         }
+    }
+
+    private void spawnCannons() {
+        if (id != FlagConstants.MAP_DAY && id != FlagConstants.MAP_NIGHT) return;
+        spawnCannon(new Position(2326, 1358), false);
+        spawnCannon(new Position(1875, 1538), true);
+        spawnCannon(new Position(486, 1105), true);
+    }
+
+    private void spawnCannon(Position pos, boolean right) {
+        FieldAttackObj fao = new FieldAttackObj(5, 0, pos, right);
+        addLife(fao);
+        ScheduledFuture sf = EventManager.addEvent(() -> removeLife(fao.getObjectId(), true),
+                FlagConstants.CANNON_LIFE_TIME, TimeUnit.MILLISECONDS);
+        addLifeSchedule(fao, sf);
+        broadcastPacket(FieldAttackObjPool.objCreate(fao));
     }
 
     private void spawnStars() {

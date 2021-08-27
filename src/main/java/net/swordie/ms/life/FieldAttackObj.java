@@ -15,9 +15,6 @@ public class FieldAttackObj extends Life implements Encodable {
     private int ownerID;
     private int reserveID;
 
-    public int xPower;
-    public int yPower;
-
     public int shots;
 
     public FieldAttackObj(int templateId) {
@@ -29,7 +26,7 @@ public class FieldAttackObj extends Life implements Encodable {
         this.ownerID = ownerID;
         setPosition(position);
         setFlip(flip);
-        shots = 2;
+        shots = 3;
     }
 
     @Override
@@ -38,7 +35,7 @@ public class FieldAttackObj extends Life implements Encodable {
         outPacket.encodeInt(getTemplateId());
         outPacket.encodeInt(getOwnerID());
         outPacket.encodeInt(getReserveID());
-        outPacket.encodeByte(1);
+        outPacket.encodeByte(isFlip());
         outPacket.encodePositionInt(getPosition());
         outPacket.encodeByte(isFlip());
     }

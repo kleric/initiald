@@ -1420,7 +1420,9 @@ public class WorldHandler {
         }
         if (cannon == null) return;
         cannon.shots--;
-        OutPacket hitP = new OutPacket(OutHeader.B2_BODY_RESULT);
+        chr.getField().broadcastPacket(FieldAttackObjPool.onPushAct(cannon.getObjectId(), 4, cannon.isFlip()), chr);
+        // Aim Bot
+        /*OutPacket hitP = new OutPacket(OutHeader.B2_BODY_RESULT);
         hitP.encodeShort(4); // 4
         hitP.encodeInt(chr.getId()); // Character ID
         hitP.encodeInt(chr.getFieldID()); // Map Id
@@ -1438,9 +1440,6 @@ public class WorldHandler {
         hitP.encodeShort(10);
         hitP.encodeShort(10);
         hitP.encodeByte(0); // seems to check collision
-            /*if (s3 >= -1) {
-                hitP.encodeString("");
-            }*/
         hitP.encodeInt(0);
         hitP.encodeInt(95001004); // skill ID
         hitP.encodeByte(0);
@@ -1485,30 +1484,47 @@ public class WorldHandler {
             hitP.encodeInt(isLeft ? cannon.xPower : -cannon.xPower); // x vel
             hitP.encodeInt(cannon.yPower); // y vel
             chr.getField().broadcastPacket(hitP);
-        }
+        }*/
         if (cannon.shots <= 0) {
             chr.getField().removeLife(cannon);
-            return;
+            chr.dispose();
         }
     }
 
-    public static void handleUserFAOGetOff(Char chr, InPacket inPacket) {
+    public static void handleUserFAOBoard(Char chr, InPacket inPacket) {
         int objectId = inPacket.decodeInt();
         int x = inPacket.decodeInt();
         int y = inPacket.decodeInt();
         FieldAttackObj obj = (FieldAttackObj) chr.getField().getLifeByObjectID(objectId);
         if (obj.getOwnerID() == 0) {
             obj.setOwnerID(chr.getId());
-            chr.write(FieldAttackObjPool.resultBoard(objectId, true, chr.getId(), chr.getId()));
-            //chr.getField().broadcastPacket(FieldAttackObjPool.objInfo(obj));
-            /*int skill = 95001002;
+            chr.getField().broadcastPacket(FieldAttackObjPool.resultBoard(objectId, true, chr.getId(), chr.getId()));
+            //chr.getField().broadcastPacket(FieldAttackObjPool.objInfo(obj), chr);
+            int skill = 95001004;
             Option o = new Option(skill, (byte) 1);
             o.nOption = 1;
             o.rOption = skill;
             chr.getTemporaryStatManager().putCharacterStatValue(AimBox2D, o);
-            chr.getTemporaryStatManager().sendSetStatPacket();*/
+            chr.getTemporaryStatManager().sendSetStatPacket();
         } else {
             chr.write(FieldAttackObjPool.resultBoard(objectId, false, chr.getId(), obj.getOwnerID()));
+        }
+        //chr.getField().broadcastPacket(FieldAttackObjPool.onPushAct(objectId, 5, true));
+    }
+
+    public static void handleUserFAOGetOff(Char chr, InPacket inPacket) {
+        int objectId = inPacket.decodeInt();
+        FieldAttackObj obj = (FieldAttackObj) chr.getField().getLifeByObjectID(objectId);
+        if (obj == null) {
+            chr.write(FieldAttackObjPool.resultGetOff(objectId, false));
+            return;
+        }
+        if (obj.getOwnerID() == chr.getId()) {
+            obj.setOwnerID(0);
+            chr.write(FieldAttackObjPool.resultGetOff(objectId, true));
+            chr.getField().broadcastPacket(FieldAttackObjPool.objInfo(obj), chr);
+        } else {
+            chr.write(FieldAttackObjPool.resultGetOff(objectId, false));
         }
         //chr.getField().broadcastPacket(FieldAttackObjPool.onPushAct(objectId, 5, true));
     }
@@ -2816,13 +2832,6 @@ public class WorldHandler {
                 }
             } else if (emotion == 6) {
                 PlayerCommands.LoadLocation.execute(c.getChr(), new String[] {"load"});
-            } else if (emotion == 5) {
-                for (FieldAttackObj obj : chr.getField().getFieldAttackObjects()) {
-                    if (obj.getOwnerID() == chr.getId()) {
-                        chr.write(FieldAttackObjPool.setAttack(obj.getObjectId(), 0));
-                        break;
-                    }
-                }
             }
         }
     }
@@ -6514,11 +6523,11 @@ public class WorldHandler {
         short s6 = inPacket.decodeShort();
 
         Position p3 = inPacket.decodePositionInt();
-        if (isLeft) {
+        if (isLeft && skillID != 95001004) {
             p3.setX(p3.getX() * -1);
         }
 
-        if (skillID == FlagConstants.SKILL_F) {
+        if (skillID == FlagConstants.SKILL_F || skillID == 95001004) {
             List<Char> fieldChrs = chr.getField().getChars();
 
             OutPacket hitP = new OutPacket(OutHeader.B2_BODY_RESULT);
@@ -6529,7 +6538,7 @@ public class WorldHandler {
 
             hitP.encodeByte(1); //ignored looks like
             hitP.encodePosition(objectPos); // short short
-            hitP.encodeInt(3000); // time lifespan of object
+            hitP.encodeInt(6000); // time lifespan of object
             hitP.encodeShort(s1);
             hitP.encodeShort(s2);
             hitP.encodeShort(s3);
