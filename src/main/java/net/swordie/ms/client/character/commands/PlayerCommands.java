@@ -285,10 +285,13 @@ public class PlayerCommands {
                         targetField = 932200001; // day
                         chr.chatMessage(ChatType.SystemNotice, "Sending you to daylight");
                     } else if (id == 4) {
+                        targetField = 942000000;
+                        chr.chatMessage(ChatType.SystemNotice, "Sending you to new morning");
+                    } else if (id == 5) {
                         targetField = 942001000;
                         chr.chatMessage(ChatType.SystemNotice, "Sending you to new sunset");
-                    } else if (id == 5) {
-                        targetField = 942000000;
+                    } else if (id == 6) {
+                        targetField = 942002000;
                         chr.chatMessage(ChatType.SystemNotice, "Sending you to new night");
                     }
                 } else if ("day".equalsIgnoreCase(args[1])) {
