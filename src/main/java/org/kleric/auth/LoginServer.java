@@ -137,6 +137,10 @@ public class LoginServer {
             List<Rank> ranking = getRanking(GhostManager.getInstance().getNewSunsetRecords());
             ctx.result(formatRankingWithPowerups(ranking));
         });
+        restApp.get("/new_morning", ctx -> {
+            List<Rank> ranking = getRanking(GhostManager.getInstance().getNewMorningRecords());
+            ctx.result(formatRankingWithPowerups(ranking));
+        });
     }
 
     private String formatRankingWithPowerups(List<Rank> ranking) {

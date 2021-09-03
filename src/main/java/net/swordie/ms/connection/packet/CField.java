@@ -744,6 +744,14 @@ public class CField {
         return outPacket;
     }
 
+    public static OutPacket fadeObjectInfo(int fieldId, String val) {
+        OutPacket outPacket = new OutPacket(OutHeader.FIELD_FADE_OBJECT_INFO);
+        outPacket.encodeInt(fieldId);
+        outPacket.encodeInt(fieldId);
+
+        return outPacket;
+    }
+
     public static OutPacket runeStoneAppear(RuneStone runeStone) { //Spawn in RuneStone
         OutPacket outPacket = new OutPacket(OutHeader.RUNE_STONE_APPEAR);
 

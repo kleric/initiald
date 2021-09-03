@@ -24,11 +24,13 @@ public class GhostManager {
     private String lastNewSunset;
     private String lastNewNight;
     private String lastMorning;
+    private String lastNewMorning;
 
     private Ranking nightGhosts;
     private Ranking sunsetGhosts;
     private Ranking newNightGhosts;
     private Ranking newSunsetGhosts;
+    private Ranking newMorningGhosts;
     private Ranking morningGhosts;
 
     private String lastRecord;
@@ -46,6 +48,7 @@ public class GhostManager {
 
     private static final String GHOSTS_NEW_NIGHT = "new_night_ghosts.json";
     private static final String GHOSTS_NEW_SUNSET = "new_sunset_ghosts.json";
+    private static final String GHOSTS_NEW_MORNING = "new_morning_ghosts.json";
 
     private Gson gson;
 
@@ -58,6 +61,7 @@ public class GhostManager {
         HashMap<String, Record> newNightRecords = new HashMap<>();
         HashMap<String, Record> newSunsetRecords = new HashMap<>();
         HashMap<String, Record> morningRecords = new HashMap<>();
+        HashMap<String, Record> newMorningRecords = new HashMap<>();
     }
 
     public static class Record {
@@ -109,6 +113,10 @@ public class GhostManager {
 
     public HashMap<String, Record> getNewSunsetRecords() {
         return races.newSunsetRecords;
+    }
+
+    public HashMap<String, Record> getNewMorningRecords() {
+        return races.newMorningRecords;
     }
 
     private GhostManager() {
@@ -167,6 +175,12 @@ public class GhostManager {
             newSunsetGhosts = new Ranking();
         }
         try {
+            JsonReader reader = new JsonReader(new FileReader(GHOSTS_NEW_MORNING));
+            newMorningGhosts = gson.fromJson(reader, Ranking.class);
+        } catch (FileNotFoundException e) {
+            newMorningGhosts = new Ranking();
+        }
+        try {
             JsonReader reader = new JsonReader(new FileReader(GHOSTS_MORNING));
             morningGhosts = gson.fromJson(reader, Ranking.class);
         } catch (FileNotFoundException e) {
@@ -210,6 +224,9 @@ public class GhostManager {
         } else if (fieldId == FlagConstants.MAP_DAY) {
             if (morningGhosts.ghostRanking.isEmpty()) return null;
             return morningGhosts.ghostRanking.get(0);
+        } else if (fieldId == FlagConstants.MAP_NEW_MORNING) {
+            if (newMorningGhosts.ghostRanking.isEmpty()) return null;
+            return newMorningGhosts.ghostRanking.get(0);
         }
         return null;
     }
@@ -230,6 +247,9 @@ public class GhostManager {
         } else if (fieldId == FlagConstants.MAP_DAY) {
             if (morningGhosts.ghostRanking.isEmpty()) return new ArrayList<>();
             return new ArrayList<>(morningGhosts.ghostRanking);
+        } else if (fieldId == FlagConstants.MAP_NEW_MORNING) {
+            if (newMorningGhosts.ghostRanking.isEmpty()) return new ArrayList<>();
+            return new ArrayList<>(newMorningGhosts.ghostRanking);
         }
         return new ArrayList<>();
     }
@@ -306,7 +326,7 @@ public class GhostManager {
                 PrintWriter out = new PrintWriter(GHOSTS_NEW_SUNSET);
                 out.write(sg);
                 out.close();
-                lastNewNight = sg;
+                lastNewSunset = sg;
             } catch (FileNotFoundException e) {
             }
         }
@@ -321,6 +341,17 @@ public class GhostManager {
             } catch (FileNotFoundException e) {
             }
         }
+        newMorningGhosts.topTen();
+        sg = gson.toJson(newMorningGhosts);
+        if (!sg.equals(lastNewMorning)) {
+            try {
+                PrintWriter out = new PrintWriter(GHOSTS_NEW_MORNING);
+                out.write(sg);
+                out.close();
+                lastNewMorning = sg;
+            } catch (FileNotFoundException e) {
+            }
+        }
     }
 
     public void updateRecord(long fieldId, Char chr, long time) {
@@ -332,7 +363,9 @@ public class GhostManager {
                 recordMap = races.newNightRecords;
             } else if (fieldId == FlagConstants.MAP_NEW_SUNSET) {
                 recordMap = races.newSunsetRecords;
-            } else if (fieldId == FlagConstants.MAP_DAY) {
+            } else if (fieldId == FlagConstants.MAP_NEW_MORNING) {
+                recordMap = races.newMorningRecords;
+            } if (fieldId == FlagConstants.MAP_DAY) {
                 recordMap = races.morningRecords;
             } else {
                 return;
@@ -378,6 +411,9 @@ public class GhostManager {
             saveGhosts();
         } else if (fieldId == 942002500){
             newNightGhosts.ghostRanking.add(ghost);
+            saveGhosts();
+        } else if (fieldId == FlagConstants.MAP_NEW_MORNING){
+            newMorningGhosts.ghostRanking.add(ghost);
             saveGhosts();
         }
     }

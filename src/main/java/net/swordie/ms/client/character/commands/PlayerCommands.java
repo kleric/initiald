@@ -7,6 +7,7 @@ import net.swordie.ms.client.character.items.Item;
 import net.swordie.ms.connection.packet.*;
 import net.swordie.ms.enums.*;
 import net.swordie.ms.loaders.*;
+import net.swordie.ms.util.Position;
 import net.swordie.ms.util.Util;
 import net.swordie.ms.world.field.Field;
 import org.apache.log4j.LogManager;
@@ -155,6 +156,13 @@ public class PlayerCommands {
         }
     }
 
+    @Command(names = {"loc"}, requiredType = NONE)
+    public static class SetLocation extends PlayerCommand {
+        public static void execute(Char chr, String[] args) {
+            chr.setSavePosition(new Position(Integer.parseInt(args[1]), Integer.parseInt(args[2])));
+        }
+    }
+
     @Command(names = {"load"}, requiredType = NONE)
     public static class LoadLocation extends PlayerCommand {
         public static void execute(Char chr, String[] args) {
@@ -216,7 +224,7 @@ public class PlayerCommands {
         public static void execute(Char chr, String [] args) {
             if (Util.isNumber(args[1])) {
                 int id = Integer.parseInt(args[1]);
-                if (id < 1 || id > 50) {
+                if (id < 1 || id > 53) {
                     chr.chatMessage(Mob, String.format("Invalid oz floor %d", id));
                     return;
                 }
@@ -226,6 +234,16 @@ public class PlayerCommands {
                 if (toField != null) {
                     chr.warp(toField);
                 }
+            }
+        }
+    }
+
+    @Command(names = {"spot"}, requiredType = NONE)
+    public static class Spotlight extends PlayerCommand {
+        public static void execute(Char chr, String [] args) {
+            if (Util.isNumber(args[1])) {
+                int id = Integer.parseInt(args[1]);
+                chr.write(UserLocal.grayBackground(id != 0));
             }
         }
     }

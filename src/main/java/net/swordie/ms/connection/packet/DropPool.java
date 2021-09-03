@@ -1,5 +1,6 @@
 package net.swordie.ms.connection.packet;
 
+import net.swordie.ms.constants.FlagConstants;
 import net.swordie.ms.enums.DropMotionType;
 import net.swordie.ms.life.drop.Drop;
 import net.swordie.ms.connection.OutPacket;
@@ -28,7 +29,7 @@ public class DropPool {
     }
 
     public static OutPacket dropEnterFieldCollisionPickUp(Drop drop, Position dropPosition, int charID) {
-        return DropPool.dropEnterField(drop, DropEnterType.Floating, 100, 100,
+        return DropPool.dropEnterField(drop, drop.getItem().getItemId() == FlagConstants.STAR ? DropEnterType.Instant : DropEnterType.Floating, 100, 100,
                 (byte) 2, dropPosition, charID, dropPosition, 0, true, (short) 0, false,
                 (byte) 0, 1, false, false);
     }

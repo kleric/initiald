@@ -153,6 +153,20 @@ public class UserLocal {
         return outPacket;
     }
 
+
+    public static OutPacket spotlight(int i) {
+        OutPacket outPacket = new OutPacket(OutHeader.SPOTLIGHT_TO_CHARACTER);
+        outPacket.encodeInt(i);
+        return outPacket;
+    }
+
+
+    public static OutPacket grayBackground(boolean gr) {
+        OutPacket outPacket = new OutPacket(OutHeader.GRAY_BACKGROUND);
+        outPacket.encodeByte(gr);
+        return outPacket;
+    }
+
     public static OutPacket changeStealMemoryResult(byte type, int stealManagerJobID, int position, int skillid, int stealSkillLv, int stealSkillMaxLv) {
         OutPacket outPacket = new OutPacket(OutHeader.CHANGE_STEAL_MEMORY_RESULT);
         StealMemoryType smType = StealMemoryType.getByVal(type);

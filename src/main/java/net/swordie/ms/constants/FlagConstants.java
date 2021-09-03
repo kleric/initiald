@@ -54,7 +54,7 @@ public class FlagConstants {
     public static final int NIGHT_SPAWN_12_X = -2000;
     public static final int NIGHT_SPAWN_12_Y = 1778;
 
-    public static final int STAR = 2023669;
+    public static final int STAR = 2633626;
 
     public static final int[] POWERUPS = {2023295, 2023296, 2023297, 2023298};
     //public static final int[] POWERUPS = { 2023296, 2023297};
@@ -79,14 +79,16 @@ public class FlagConstants {
     public static final int MAP_NIGHT = 932200300;
     public static final int MAP_SUNSET = 932200200;
     public static final int MAP_DAY = 932200100;
+    public static final int MAP_NEW_MORNING = 942000500;
     public static final int MAP_NEW_SUNSET = 942001500;
     public static final int MAP_NEW_NIGHT = 942002500;
 
     public static final int MAP_DAY_LOBBY = 932200001;
     public static final int MAP_SUNSET_LOBBY = 932200003;
     public static final int MAP_NIGHT_LOBBY = 932200005;
+    public static final int MAP_NEW_MORNING_LOBBY = 942000000;
     public static final int MAP_NEW_SUNSET_LOBBY = 942001000;
-    public static final int MAP_NEW_NIGHT_LOBBY = 942000000;
+    public static final int MAP_NEW_NIGHT_LOBBY = 942002000;
 
     public static final long MAP_EVENT_AREA = 820000000;
 
@@ -105,6 +107,13 @@ public class FlagConstants {
     public static final Position S_STAR_3 = new Position(2013, 1128);
     public static final Position S_STAR_4 = new Position(1352, 1122);
     public static final Position S_STAR_5 = new Position(724, 1001);
+
+    public static final Position M_STAR_1 = new Position(97, 2300);
+    public static final Position M_STAR_2 = new Position(1893, 1238);
+    public static final Position M_STAR_3 = new Position(811, 1178);
+    public static final Position M_STAR_4 = new Position(420, 1000);
+    public static final Position M_STAR_5 = new Position(-582, 1058);
+    public static final Position M_STAR_6 = new Position(-2028, 1248);
 
     public static boolean isRaceLobby(int mapId) {
         switch (mapId) {

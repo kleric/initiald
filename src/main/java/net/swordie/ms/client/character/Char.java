@@ -3138,6 +3138,7 @@ public class Char {
 				case 2023296: // Flag: High Jump
 				case 2023297: // Flag: Slipstream
 				case 2023298: // Flag: Fire cannon
+				case 2633626:
 					isPowerUp = true;
 					break;
 			}

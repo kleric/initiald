@@ -63,6 +63,14 @@ public class FieldAttackObj extends Life implements Encodable {
 
     @Override
     public void broadcastLeavePacket() {
+        if (ownerID != 0) {
+            Char owner = getField().getCharByID(ownerID);
+            if (owner != null) {
+                owner.write(FieldAttackObjPool.resultGetOff(getObjectId(), true));
+                owner.dispose();
+            }
+            ownerID = 0;
+        }
         getField().broadcastPacket(FieldAttackObjPool.objRemoveByKey(this.getObjectId()));
     }
 }

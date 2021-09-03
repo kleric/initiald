@@ -25,9 +25,11 @@ else:
             elif field.id == 932200003: # sunset
                 targetField = 932200200
                 targetPortal = 0
+            elif field.id == 942000000: # new morning
+                targetField = 942000500
             elif field.id == 942001000: # new sunset
                 targetField = 942001500
-            elif field.id == 942000000: # new night
+            elif field.id == 942002000: # new night
                 targetField = 942002500
             sm.warpFlag(targetField, targetPortal)
     elif not party.hasCharAsLeader(chr):
@@ -42,8 +44,10 @@ else:
             elif field.id == 932200003: # sunset
                 targetField = 932200200
                 targetPortal = 0
+            elif field.id == 942000000: # new morning
+                targetField = 942000500
             elif field.id == 942001000: # new sunset
                 targetField = 942001500
-            elif field.id == 942000000: # new night
-                targetPortal = 942002500
+            elif field.id == 942002000: # new night
+                targetField = 942002500
             sm.warpInstanceIn(targetField, targetPortal, True)

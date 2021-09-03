@@ -794,6 +794,7 @@ public class Field {
         switch (id) {
             case FlagConstants.MAP_NEW_NIGHT:
             case FlagConstants.MAP_NEW_SUNSET:
+            case FlagConstants.MAP_NEW_MORNING:
                 return !isChannelField;
         }
         return false;
@@ -806,6 +807,7 @@ public class Field {
             case FlagConstants.MAP_NIGHT:
             case FlagConstants.MAP_NEW_NIGHT:
             case FlagConstants.MAP_NEW_SUNSET:
+            case FlagConstants.MAP_NEW_MORNING:
                 return !isChannelField;
         }
         return false;
@@ -1890,6 +1892,13 @@ public class Field {
             spawnStar(FlagConstants.S_STAR_3);
             spawnStar(FlagConstants.S_STAR_4);
             spawnStar(FlagConstants.S_STAR_5);
+        } else if (id == FlagConstants.MAP_NEW_MORNING) {
+            spawnStar(FlagConstants.M_STAR_1);
+            spawnStar(FlagConstants.M_STAR_2);
+            spawnStar(FlagConstants.M_STAR_3);
+            spawnStar(FlagConstants.M_STAR_4);
+            spawnStar(FlagConstants.M_STAR_5);
+            spawnStar(FlagConstants.M_STAR_6);
         }
     }
 

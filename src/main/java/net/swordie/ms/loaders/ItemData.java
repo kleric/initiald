@@ -2,6 +2,7 @@ package net.swordie.ms.loaders;
 
 import net.swordie.ms.ServerConstants;
 import net.swordie.ms.client.character.items.*;
+import net.swordie.ms.connection.db.DatabaseManager;
 import net.swordie.ms.constants.GameConstants;
 import net.swordie.ms.constants.ItemConstants;
 import net.swordie.ms.enums.*;
@@ -1822,6 +1823,7 @@ public class ItemData {
     }
 
     public static void main(String[] args) {
+        DatabaseManager.init();
         generateDatFiles();
     }
 
