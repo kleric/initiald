@@ -15,6 +15,8 @@ if field.isChannelField() or chr.lapCount < 3:
         sm.teleportInField(-343, 2196)
     elif field.id == 932200100: # Night
         sm.teleportInField(-2203, 2558)
+    elif field.id == 942000500:
+        sm.teleportInField(-2203, 2558)
     elif field.id == 942001500:
         sm.teleportToPortal(1)
     elif field.id == 942002500:
@@ -25,6 +27,8 @@ else:
     elif field.id == 942001500:
         sm.teleportToPortal(5)
     elif field.id == 942002500:
+        sm.teleportToPortal(3)
+    elif field.id == 942000500:
         sm.teleportToPortal(3)
     else:
         sm.teleportToPortal(3)
