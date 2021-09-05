@@ -365,7 +365,7 @@ public class GhostManager {
                 recordMap = races.newSunsetRecords;
             } else if (fieldId == FlagConstants.MAP_NEW_MORNING) {
                 recordMap = races.newMorningRecords;
-            } if (fieldId == FlagConstants.MAP_DAY) {
+            } else if (fieldId == FlagConstants.MAP_DAY) {
                 recordMap = races.morningRecords;
             } else {
                 return;

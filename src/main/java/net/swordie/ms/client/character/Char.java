@@ -3258,8 +3258,8 @@ public class Char {
 					refreshFlagActionBar();
 					break;
 				case FlagConstants.STAR: // star
-					sjumpUseTime -= 20_000;
-					ddashUseTime -= 20_000;
+					sjumpUseTime -= 10_000;
+					ddashUseTime -= 10_000;
 					flagSkillResetTimer();
 					break;
 				default:
