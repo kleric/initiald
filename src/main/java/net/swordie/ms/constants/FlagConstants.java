@@ -70,7 +70,7 @@ public class FlagConstants {
     public static final int SKILL_CANNON = 95001004;
     public static final int CANNON_SPAWN_CYCLE = 35_000;
     public static final int CANNON_START_TIME = 20_000;
-    public static final int CANNON_LIFE_TIME = 10_000;
+    public static final int CANNON_LIFE_TIME = 15_000;
 
     public static final int SKILL_CD = 40_000;
 
