@@ -1,7 +1,38 @@
-# Maplestory v203.4 Fork of MapleEllinel
+# Initial D v203.4 flag simulator
 
-A Java Maplestory server emulator. This is a fork of the v203.4 repo [MapleEllinel](https://forum.ragezone.com/f427/mapleellinel-v203-4-based-swordie-1160913/) by Mechaviv and has since been worked on by Poki.
+A Java Maplestory server emulator modified to allow practicing and racing for Maplestory flag race. This is based off of the v203.4 source modified by poki, with all parts of flag race fixed/implemented. 
 
+## Notable features
+ - Implemented Fballs and cannons
+ - Ghost/record management so you can race against the best time
+ - Powerup spawns
+ - Practice/race mode for all maps (including new flag race maps)
+
+## Note on new maps
+You'll need to make some client edits to support the new maps. Notably removing pickup cooldown for stars, and importing the maps themselves.
+```
+  // Star pickup cooldown removal
+  DWORD base = 0x012BA6D0;
+	*(BYTE*)(base + 1) = 0x2B;
+	*(BYTE*)(base + 2) = 0x81;
+	*(BYTE*)(base + 3) = 0x62;
+	*(BYTE*)(base + 4) = 0xFF;
+	*(BYTE*)(base + 5) = 0x3D;
+	*(BYTE*)(base + 6) = 0x80;
+	*(BYTE*)(base + 7) = 0xC7;
+	*(BYTE*)(base + 8) = 0x25;
+	*(BYTE*)(base + 9) = 0x38;
+	*(BYTE*)(base + 10) = 0x7E;
+	*(BYTE*)(base + 11) = 0x2C;
+	*(BYTE*)(base + 12) = 0x7F;
+	*(BYTE*)(base + 13) = 0x4A;
+
+  // Portal delay removal (lets you hold up to go through portals more quickly)
+	base = 0x026BE312;
+	for (int i = 0; i < 17; i++) {
+		*(BYTE*)(base + i) = 0x90;
+	}
+```
 ## Installation
 - Join SwordieMS [Discord](https://discord.gg/qzjWZP7hc5).
 - Proceed to server-setup-guide.
@@ -25,17 +56,5 @@ A Java Maplestory server emulator. This is a fork of the v203.4 repo [MapleEllin
 
 - Setup guide https://docs.google.com/document/d/1BT0IEIUhEIrS9XWISzKcXiSY89PnACYBHnoNI7gIom8/edit?usp=sharing
 
-## Noteable Changes
-- A decent amount of packets fixed (err 38)
-- Threading issues
-- Stability fixes, that the original v203.4 lacked
-
-## Tech Stack
-- [Java 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
-- [MySQL](https://dev.mysql.com/downloads/workbench/) & [WAMP](https://www.wampserver.com/en/)
-- Github (public version control)
-- [IntelliJ](https://www.jetbrains.com/idea/)
-- [WzDumper v1.9.2](https://github.com/Xterminatorz/WZ-Dumper/releases/tag/1.9.2)
-
 ## Credits
-- Notable Credits: SwordieMS Team, Mechaviv
+- Notable Credits: SwordieMS Team, Mechaviv, Poki
