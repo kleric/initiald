@@ -512,10 +512,12 @@ public class UserRemote {
         outPacket.encodeInt(hitInfo.hpDamage);
         outPacket.encodeByte(hitInfo.isCrit);
         outPacket.encodeByte(hitInfo.hpDamage == 0);
-        if (hitInfo.type == -8) {
-            outPacket.encodeInt(hitInfo.skillID);
-            outPacket.encodeInt(0); // ignored
-            outPacket.encodeInt(hitInfo.otherUserID);
+        if (hitInfo.type < -1) {
+            if (hitInfo.type == -8) {
+                outPacket.encodeInt(hitInfo.skillID);
+                outPacket.encodeInt(0); // ignored
+                outPacket.encodeInt(hitInfo.otherUserID);
+            }
         } else {
             outPacket.encodeInt(hitInfo.mobID);
             outPacket.encodeByte(hitInfo.action);
@@ -540,7 +542,6 @@ public class UserRemote {
         if (hitInfo.hpDamage == -1) {
             outPacket.encodeInt(hitInfo.userSkillID);
         }
-
         return outPacket;
     }
 

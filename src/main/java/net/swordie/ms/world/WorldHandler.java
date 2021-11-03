@@ -1485,10 +1485,6 @@ public class WorldHandler {
             hitP.encodeInt(cannon.yPower); // y vel
             chr.getField().broadcastPacket(hitP);
         }*/
-        if (cannon.shots <= 0) {
-            chr.getField().removeLife(cannon);
-            chr.dispose();
-        }
     }
 
     public static void handleUserFAOBoard(Char chr, InPacket inPacket) {
@@ -2816,6 +2812,9 @@ public class WorldHandler {
                         break;
                     case FlagConstants.MAP_NEW_SUNSET:
                         targetField = FlagConstants.MAP_NEW_SUNSET_LOBBY;
+                        break;
+                    case FlagConstants.MAP_NEW_MORNING:
+                        targetField = FlagConstants.MAP_NEW_MORNING_LOBBY;
                         break;
                 }
                 if (chr.getField().isRace()) {
@@ -6514,15 +6513,23 @@ public class WorldHandler {
         inPacket.decodeByte();
         short s1 = inPacket.decodeShort();
         short s2 = inPacket.decodeShort();
-        short s3 = inPacket.decodeShort();
-        inPacket.decodeInt(); //dunno
-        Position forcedPos = inPacket.decodePosition();
+        // 4 bytes?
+
+        // 4 bytes
+        // 1 byte
+        // 2 bytes
+        // 2 bytes
+        // 1 byte
+        // 4 bytes
+        short s3 = inPacket.decodeShort(); // 2
+        inPacket.decodeInt(); //dunno 4
+        Position forcedPos = inPacket.decodePosition(); // 4
 
         short s4 = inPacket.decodeShort();
         short s5 = inPacket.decodeShort();
         short s6 = inPacket.decodeShort();
 
-        Position p3 = inPacket.decodePositionInt();
+        Position p3 = inPacket.decodePositionInt(); //20,21
         if (isLeft && skillID != 95001004) {
             p3.setX(p3.getX() * -1);
         }
@@ -6536,7 +6543,7 @@ public class WorldHandler {
             hitP.encodeInt(chr.getFieldID()); // Map Id
             hitP.encodeShort(1); // number of b2 bodies
 
-            hitP.encodeByte(1); //ignored looks like
+            hitP.encodeByte(0); //ignored looks like
             hitP.encodePosition(objectPos); // short short
             hitP.encodeInt(6000); // time lifespan of object
             hitP.encodeShort(s1);
