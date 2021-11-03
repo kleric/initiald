@@ -9,30 +9,35 @@ A Java Maplestory server emulator modified to allow practicing and racing for Ma
  - Practice/race mode for all maps (including new flag race maps)
 
 ## Note on new maps
-You'll need to make some client edits to support the new maps. Notably removing pickup cooldown for stars, and importing the maps themselves.
+You'll need to make some memory mods to your client in order to make a few things work. You can see the changes below. Should work if you copy paste it into the ```FuckMaple``` method in your AuthHook.
 ```
   // Star pickup cooldown removal
   DWORD base = 0x012BA6D0;
-	*(BYTE*)(base + 1) = 0x2B;
-	*(BYTE*)(base + 2) = 0x81;
-	*(BYTE*)(base + 3) = 0x62;
-	*(BYTE*)(base + 4) = 0xFF;
-	*(BYTE*)(base + 5) = 0x3D;
-	*(BYTE*)(base + 6) = 0x80;
-	*(BYTE*)(base + 7) = 0xC7;
-	*(BYTE*)(base + 8) = 0x25;
-	*(BYTE*)(base + 9) = 0x38;
-	*(BYTE*)(base + 10) = 0x7E;
-	*(BYTE*)(base + 11) = 0x2C;
-	*(BYTE*)(base + 12) = 0x7F;
-	*(BYTE*)(base + 13) = 0x4A;
+  *(BYTE*)(base + 1) = 0x2B;
+  *(BYTE*)(base + 2) = 0x81;
+  *(BYTE*)(base + 3) = 0x62;
+  *(BYTE*)(base + 4) = 0xFF;
+  *(BYTE*)(base + 5) = 0x3D;
+  *(BYTE*)(base + 6) = 0x80;
+  *(BYTE*)(base + 7) = 0xC7;
+  *(BYTE*)(base + 8) = 0x25;
+  *(BYTE*)(base + 9) = 0x38;
+  *(BYTE*)(base + 10) = 0x7E;
+  *(BYTE*)(base + 11) = 0x2C;
+  *(BYTE*)(base + 12) = 0x7F;
+  *(BYTE*)(base + 13) = 0x4A;
 
   // Portal delay removal (lets you hold up to go through portals more quickly)
-	base = 0x026BE312;
-	for (int i = 0; i < 17; i++) {
-		*(BYTE*)(base + i) = 0x90;
-	}
+  base = 0x026BE312;
+  for (int i = 0; i < 17; i++) {
+      *(BYTE*)(base + i) = 0x90;
+  }
 ```
+
+You'll also need updated Item.wz (stars) and Map.wz (maps themselves)
+ - [Item.wz](https://mega.nz/file/5aYR3STR#-DuwkNqBWRxQ6sCMXACOccoud5AXMz_VjUG90iLAh0M)
+ - [Map.wz](https://mega.nz/file/dHQzxIKa#7--SO6RiGBwLab5vtBVybGJcrdU7v1VGwOgNCLoGHwo)
+ 
 ## Installation
 - Join SwordieMS [Discord](https://discord.gg/qzjWZP7hc5).
 - Proceed to server-setup-guide.
