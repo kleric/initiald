@@ -389,23 +389,26 @@ public abstract class Job {
 	public void handleHit(Client c, InPacket inPacket) {
 		int idk1 = inPacket.decodeInt();
 		inPacket.decodeInt(); // tick
-		byte idk2 = inPacket.decodeByte(); // -1?
+		byte type = inPacket.decodeByte(); // -1?
 		byte idk3 = inPacket.decodeByte();
 		int damage = inPacket.decodeInt();
 		short idk4 = inPacket.decodeShort();
 		int templateID = 0;
 		int mobID = 0;
-		if (inPacket.getUnreadAmount() >= 13) {
+		if (inPacket.getUnreadAmount() >= 9) {
 			templateID = inPacket.decodeInt();
 			mobID = inPacket.decodeInt();
 			boolean left = inPacket.decodeByte() != 0;
-			int skillID = inPacket.decodeInt();
+			if (inPacket.getUnreadAmount() >= 4) {
+				int skillID = inPacket.decodeInt();
+			}
 		}
 
 		HitInfo hitInfo = new HitInfo();
 		hitInfo.hpDamage = damage;
 		hitInfo.templateID = templateID;
 		hitInfo.mobID = mobID;
+		hitInfo.type = type;
 
 		if(chr.isInvincible()) {
 			return;
@@ -504,7 +507,7 @@ public abstract class Job {
 		chr.setStat(Stat.mp, curMP);
 		stats.put(Stat.mp, curMP);
 		c.write(WvsContext.statChanged(stats));
-		//chr.getField().broadcastPacket(UserRemote.hit(chr, hitInfo), chr);
+		chr.getField().broadcastPacket(UserRemote.hit(chr, hitInfo), chr);
 		if (chr.getParty() != null) {
 			chr.getParty().broadcast(UserRemote.receiveHP(chr), chr);
 		}
