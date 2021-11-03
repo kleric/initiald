@@ -2490,7 +2490,7 @@ public class ScriptManagerImpl implements ScriptManager {
 
 	}
 
-	public void showFlagRanking() {
+	/*public void showFlagRanking() {
 		List<Char> characters = (List<Char>) DatabaseManager.getObjListFromDB(Char.class);
 
 		boolean sunset = chr.getFieldID() == FlagConstants.MAP_SUNSET_EXIT;
@@ -2535,7 +2535,7 @@ public class ScriptManagerImpl implements ScriptManager {
 		}
 
 		sendSayOkay(sb.toString());
-	}
+	}*/
 
 	public void flagGoalReached() {
 		Field field = getChr().getField();
@@ -2555,18 +2555,8 @@ public class ScriptManagerImpl implements ScriptManager {
 		field.addGhost(place, timeMs, chr);
 		showWeatherNoticeToField(chr.getName() + " finished! Place " + place, WeatherEffNoticeType.SnowySnowAndSprinkledFlowerAndSoapBubbles);
 		if (fieldId == 932200200) { //sunset
-			if (chr.bestTimeSunset == null) {
-				chr.bestTimeSunset = timeMs;
-			} else {
-				chr.bestTimeSunset = Math.min(chr.bestTimeSunset, timeMs);
-			}
 			giveExp(110011);
 		} else if (fieldId == FlagConstants.MAP_NIGHT){
-			if (chr.bestTime == null) {
-				chr.bestTime = timeMs;
-			} else {
-				chr.bestTime = Math.min(chr.bestTime, timeMs);
-			}
 			giveExp(110011);
 		} else {
 			giveExp(110011);

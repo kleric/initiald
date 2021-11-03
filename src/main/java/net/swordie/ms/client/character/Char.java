@@ -208,15 +208,6 @@ public class Char {
 	@Column(name = "monsterparkcount")
 	private byte monsterParkCount;
 
-	@Column(name = "bestTime")
-	public Long bestTime;
-
-	@Column(name = "bestTimeSunset")
-	public Long bestTimeSunset;
-
-	//@Column(name = "powerups")
-	//public int powerups;
-
 	private int partyID = 0; // Just for DB purposes
 	private int previousFieldID;
 

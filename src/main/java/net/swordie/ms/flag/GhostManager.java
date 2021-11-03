@@ -128,26 +128,6 @@ public class GhostManager {
             races = gson.fromJson(reader, Races.class);
         } catch (FileNotFoundException e) {
             races = new Races();
-            List<Char> characters = (List<Char>) DatabaseManager.getObjListFromDB(Char.class);
-
-            for (Char chr : characters) {
-                String name = chr.getName();
-                if (chr.bestTime != null) {
-                    Record record = new Record();
-                    record.time = chr.bestTime;
-                    record.sjumps = Integer.MAX_VALUE;
-                    record.dashes = Integer.MAX_VALUE;
-                    races.nightRecords.put(name, record);
-                }
-
-                if (chr.bestTimeSunset != null) {
-                    Record record = new Record();
-                    record.time = chr.bestTimeSunset;
-                    record.sjumps = 0;
-                    record.dashes = 0;
-                    races.sunsetRecords.put(name, record);
-                }
-            }
             saveRecords();
         }
         try {

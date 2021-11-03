@@ -3,6 +3,4 @@
 # ParentID: 9000232
 # Object Position X: -334
 # Object Position Y: 2435
-
-sm.showFlagRanking()
 sm.dispose()
