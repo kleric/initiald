@@ -1084,17 +1084,12 @@ public enum CharacterTemporaryStat implements Comparator<CharacterTemporaryStat>
     }
 
     public static void main(String[] args) {
-        int a = Stigma.bitPos;
+        int a = AimBox2D.bitPos;
 //        int val = 1 << (31 - (a & 0x1f));
 //        int pos = a >> 5;
-        int val = 0x1000;
-        int pos = 0;
+        int val = AimBox2D.val;
+        int pos = AimBox2D.pos;
         log.debug(String.format("value 0x%04x, pos %d", val, pos));
-        for(CharacterTemporaryStat cts : values()) {
-            if(cts.getVal() == val && cts.getPos() == pos) {
-                log.debug("Corresponds to " + cts);
-            }
-        }
 //        for (CharacterTemporaryStat cts : values()) {
 //            val = cts.getVal();
 //            for (int i = 0; i < 32; i++) {
