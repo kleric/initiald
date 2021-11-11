@@ -14,8 +14,8 @@ import java.util.HashMap;
 
 public class DiscordLobbyManager {
 
-    private static final String BOT_TOKEN = "ODUwNDYxNDIxNTE3OTMwNjA3.YLqD6w.zPBhWHeIaDxJ7HNUG1yBdZYCj1g";
-    private static final String APP_ID = "850461421517930607";
+    private static final String BOT_TOKEN = "<insert yours>";
+    private static final String APP_ID = "<insert yours>";
 
     public static final int RACE_LOBBY_CAPACITY = 32;
 
